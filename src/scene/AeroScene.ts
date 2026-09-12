@@ -47,6 +47,7 @@ export class AeroScene {
   private crankAngle = 0;
   private frameHandle = 0;
   private lastFrameMs = 0;
+  private insets = { left: 0, right: 0, bottom: 0 };
 
   constructor(private readonly container: HTMLElement, initial: SceneState) {
     this.state = initial;
@@ -83,6 +84,15 @@ export class AeroScene {
   setState(patch: Partial<SceneState>): void {
     this.state = { ...this.state, ...patch };
     this.applyEquipment();
+  }
+
+  /**
+   * Pixels covered by overlay panels on each side. The view is shifted so the
+   * rider sits in the middle of the uncovered area instead of behind a panel.
+   */
+  setInsets(insets: { left: number; right: number; bottom: number }): void {
+    this.insets = insets;
+    this.resize();
   }
 
   setView(view: CameraView): void {
@@ -141,6 +151,8 @@ export class AeroScene {
     const { clientWidth: w, clientHeight: h } = this.container;
     if (w === 0 || h === 0) return;
     this.renderer.setSize(w, h);
-    this.rig.setAspect(w / h);
+    const { left, right, bottom } = this.insets;
+    this.rig.setAspect(w / h, Math.max(1, w - left - right) / Math.max(1, h - bottom));
+    this.rig.camera.setViewOffset(w, h, -(left - right) / 2, bottom / 2, w, h);
   }
 }

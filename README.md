@@ -12,8 +12,8 @@ Vite + TypeScript + Three.js. No backend.
 | Checkpoint | State |
 | --- | --- |
 | 1. Physics module + constants + tests | done |
-| 2. Primitive rider, pose presets, pedaling, basic particle flow | done (temporary dev controls) |
-| 3. Controls wired to readout + baseline delta | not started |
+| 2. Primitive rider, pose presets, pedaling, basic particle flow | done |
+| 3. Controls wired to readout + baseline delta | done |
 | 4. Wake responding to CdA | not started |
 | 5. Particle deflection, chart, polish | not started |
 
@@ -42,9 +42,15 @@ src/
     environment.ts   tunnel, rolling tarmac road (procedural texture), lights, speed arrow
     cameraRig.ts     orbit camera + side / 3/4 front / rear-wake presets
     AeroScene.ts     render loop; takes a SceneState, never calls physics
-  ui/
+  ui/             controls, readouts, and the physics-to-scene wiring
+    appState.ts      everything the user controls, in SI units; baseline snapshot
+    evaluate.ts      runs the physics for a state (hold power or hold speed); pure, tested
+    baseline.ts      baseline comparison: watts saved / speed gained / time over 40 km; pure, tested
+    format.ts        unit conversion + number formatting for display
+    store.ts         tiny state container
+    controlPanel.ts  lil-gui grouped controls (Ride, Rider, Position, Kit, Bike, Environment, Units & view)
+    readout.ts       hero number, W/kg + CdA + Crr tiles, power breakdown bar, baseline delta
     sceneMapping.ts  physics output to SceneState (cadence from power, airspeed)
-    devBar.ts        TEMPORARY checkpoint-2 controls, replaced in checkpoint 3
     labels.ts        display names for presets
 scripts/
   reference-table.test.ts   prints a watts-by-position table for eyeballing
@@ -88,6 +94,19 @@ jersey, road helmet, box wheels, 25 mm tires). Everything else is an additive
 delta from that baseline, so each modifier table has a 0 entry. Wheels are
 per-wheel objects so a yaw-dependent curve can be added later without touching
 the composition.
+
+## Using it
+
+- **Ride mode.** "Hold power, solve speed" (default) fixes your watts and shows the speed
+  your setup buys you, so aero changes make the road and airflow visibly speed up.
+  "Hold speed, solve power" fixes the speed and shows the watts needed. Switching modes
+  carries over the current values, so nothing jumps.
+- **Baseline.** Pin a setup, then change position or equipment. The readout shows watts
+  saved at the same speed, or speed gained at the same power plus time saved over 40 km
+  (25 mi in imperial). The baseline covers position, kit, helmet, bike, wheels, tires and
+  bike mass; ride conditions and rider mass are shared.
+- **Bike type pre-fills bike mass** with a typical weight for that frame. Override it after.
+- **W/kg** uses rider mass only.
 
 ## Scene notes
 

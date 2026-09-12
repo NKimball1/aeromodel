@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      lil-gui:
+        specifier: ^0.21.0
+        version: 0.21.0
       three:
         specifier: ^0.170.0
         version: 0.170.0
@@ -582,6 +585,9 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
+  lil-gui@0.21.0:
+    resolution: {integrity: sha512-tpvxN7v1GvE/Tv+GRopfOp0W7fVEjF4PltkuX8vOCIfim22rD1ztvfkoEMcv9lzQeuNUSeIrUmUjBwmlW/oUew==}
+
   loupe@3.2.1:
     resolution: {integrity: sha512-CdzqowRJCeLU72bHvWqwRBBlLcMEtIvGrlvef74kMnV2AolS9Y8xUv1I0U/MNAWMhBlKIoyuEgoJ0t/bbwHbLQ==}
 
@@ -1150,6 +1156,8 @@ snapshots:
 
   fsevents@2.3.3:
     optional: true
+
+  lil-gui@0.21.0: {}
 
   loupe@3.2.1: {}
 

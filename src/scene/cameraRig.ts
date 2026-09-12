@@ -10,12 +10,19 @@ export const CAMERA_VIEWS: Record<CameraView, { label: string; position: Vector3
 };
 
 const TRANSITION_SECONDS = 0.8;
+/** Presets are framed for this aspect ratio of the free (unpanelled) area; narrower views back the camera off. */
+const DESIGN_ASPECT = 1.5;
+const MAX_PULLBACK = 1.8;
 
 /** Orbit camera with animated jumps between preset views. */
 export class CameraRig {
   readonly camera: PerspectiveCamera;
   readonly controls: OrbitControls;
-  private transition: { fromPos: Vector3; fromTarget: Vector3; to: CameraView; t: number } | null = null;
+  private transition: { fromPos: Vector3; fromTarget: Vector3; toPos: Vector3; toTarget: Vector3; t: number } | null = null;
+  private view: CameraView;
+  private pullback = 1;
+  /** True once the user orbits; stops resizes from snapping the camera back to the preset. */
+  private userMoved = false;
 
   constructor(domElement: HTMLElement, initial: CameraView) {
     this.camera = new PerspectiveCamera(40, 1, 0.05, 60);
@@ -23,29 +30,56 @@ export class CameraRig {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.08;
     this.controls.minDistance = 1.2;
-    this.controls.maxDistance = 12;
+    this.controls.maxDistance = 14;
     this.controls.maxPolarAngle = Math.PI / 2 - 0.02;
     // A drag cancels any in-flight preset transition.
-    this.controls.addEventListener('start', () => (this.transition = null));
+    this.controls.addEventListener('start', () => {
+      this.transition = null;
+      this.userMoved = true;
+    });
 
-    const v = CAMERA_VIEWS[initial];
-    this.camera.position.copy(v.position);
-    this.controls.target.copy(v.target);
-    this.controls.update();
+    this.view = initial;
+    this.snapToView();
   }
 
   setView(view: CameraView): void {
+    this.view = view;
+    this.userMoved = false;
+    const dest = this.presetPose(view);
     this.transition = {
       fromPos: this.camera.position.clone(),
       fromTarget: this.controls.target.clone(),
-      to: view,
+      toPos: dest.position,
+      toTarget: dest.target,
       t: 0,
     };
   }
 
-  setAspect(aspect: number): void {
+  /**
+   * @param aspect full canvas aspect
+   * @param freeAspect aspect of the area not covered by panels, used to decide how far to back off
+   */
+  setAspect(aspect: number, freeAspect = aspect): void {
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
+    // Square root: backing off fully for the narrow width over-shrinks the rider vertically.
+    const pullback = Math.min(MAX_PULLBACK, Math.max(1, Math.sqrt(DESIGN_ASPECT / freeAspect)));
+    if (Math.abs(pullback - this.pullback) < 1e-3) return;
+    this.pullback = pullback;
+    if (!this.userMoved && !this.transition) this.snapToView();
+  }
+
+  private presetPose(view: CameraView): { position: Vector3; target: Vector3 } {
+    const v = CAMERA_VIEWS[view];
+    const position = v.target.clone().add(v.position.clone().sub(v.target).multiplyScalar(this.pullback));
+    return { position, target: v.target.clone() };
+  }
+
+  private snapToView(): void {
+    const p = this.presetPose(this.view);
+    this.camera.position.copy(p.position);
+    this.controls.target.copy(p.target);
+    this.controls.update();
   }
 
   update(dt: number): void {
@@ -53,9 +87,8 @@ export class CameraRig {
       const tr = this.transition;
       tr.t = Math.min(1, tr.t + dt / TRANSITION_SECONDS);
       const e = tr.t < 0.5 ? 4 * tr.t ** 3 : 1 - (-2 * tr.t + 2) ** 3 / 2;
-      const dest = CAMERA_VIEWS[tr.to];
-      this.camera.position.lerpVectors(tr.fromPos, dest.position, e);
-      this.controls.target.lerpVectors(tr.fromTarget, dest.target, e);
+      this.camera.position.lerpVectors(tr.fromPos, tr.toPos, e);
+      this.controls.target.lerpVectors(tr.fromTarget, tr.toTarget, e);
       if (tr.t >= 1) this.transition = null;
     }
     this.controls.update();

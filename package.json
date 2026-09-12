@@ -12,6 +12,7 @@
     "ref": "vitest run --config vitest.scripts.config.ts"
   },
   "dependencies": {
+    "lil-gui": "^0.21.0",
     "three": "^0.170.0"
   },
   "devDependencies": {
