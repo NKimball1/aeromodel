@@ -40,7 +40,7 @@ src/
     wheel.ts         lathe rims by depth, disc, tire by width, rotors, spoke blur at speed
     wind.ts          streak particles +X to -X; slow, swirl and tint inside the wake
     deflection.ts    body capsules from the skeleton; pushes streaks around the rider; pure, tested
-    hotspots.ts      per-component turbulence plumes (helmet, kit, frame, wheels, tires); pure, tested
+    hotspots.ts      per-part turbulence plumes (shoulders, legs, clothing, helmet, frame, wheels, tires); pure, tested
     hotspotSmoke.ts  smoke shed from each component, sized by how draggy that option is
     wake.ts          CdA -> wake shape (length, width, deficit, chaos, opacity); pure, tested
     wakeSmoke.ts     soft smoke puffs shed from the rider's back (custom point shader)
@@ -141,12 +141,14 @@ the composition.
   velocity deficit, turbulence and smoke opacity all scale with it, deliberately
   exaggerated. Its height comes from the rider's pose, so a tuck also lowers it. Tuning
   lives in `WAKE_VISUAL` (wake.ts), `WIND_VISUAL` (wind.ts) and `SMOKE_VISUAL` (wakeSmoke.ts).
-- Every aero choice has its own visible plume, not just the overall wake. A road helmet
-  sheds a churning plume off the head and an aero helmet leaves clean air; box wheels
-  churn while deep rims and a disc run clean; the same for clothing, frame and tire width.
-  A component's plume level is where its option ranks within that component's options
-  (best = clean, worst = full plume), taken from the physics constants, so tuning a CdA
-  delta moves the visual too. Tuning lives in `HOTSPOT_VISUAL` and `HOTSPOT_SMOKE_VISUAL`.
+- Every drag source has its own visible plume, not just the overall wake: the rider's
+  shoulders, legs, clothing and helmet, and the bike's frame, wheels and tires. Two things
+  set a plume. Its **rank** is where the chosen option sits within that part's options
+  (from the physics constants), so every gear or position change visibly moves its plume.
+  Its **weight** is that part's share of total drag, so the rider (roughly three quarters
+  of the drag) dominates and the bike's plumes are smaller. Nothing is ever clean air: the
+  best option still sheds a small plume. Tuning lives in `HOTSPOT_VISUAL` and
+  `HOTSPOT_SMOKE_VISUAL`.
 - Deflection is deliberately coarse: torso, head, arms and legs are capsules rebuilt from
   the skeleton each frame, and each streak end near one is pushed outward with a smooth
   falloff. No flow solving. Tuning lives in `DEFLECT_VISUAL` (deflection.ts).

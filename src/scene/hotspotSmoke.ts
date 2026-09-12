@@ -4,12 +4,12 @@ import { SPEED_VISUAL } from './speedVisuals';
 import { createSmokeMaterial, smokeScale } from './wakeSmoke';
 
 export const HOTSPOT_SMOKE_VISUAL = {
-  /** Puffs per component at level 1. Fewer as the level drops; none when clean. */
+  /** Puffs per part at full level and weight. Never zero: every part sheds something. */
   poolPerEmitter: 260,
   /** Puff diameter at the emitter and at the plume's end, metres (× level factor). */
   size: [0.05, 0.3] as const,
-  /** Peak opacity at level 1. Scales with level² so a clean part is truly clean. */
-  opacity: 0.75,
+  /** Peak opacity at full level and weight. */
+  opacity: 0.72,
   /** Drift speed as a fraction of airspeed: dirty air is slow air. */
   drift: [0.35, 0.8] as const,
   /** Swirl around the plume axis, rad/s at level 1. */
@@ -19,9 +19,10 @@ export const HOTSPOT_SMOKE_VISUAL = {
 };
 
 /**
- * Smoke plumes shed from individual components (helmet, kit, frame, wheels,
- * tires). One pool per component; how many puffs are alive, how big, how
- * opaque and how violently they swirl all follow that component's level.
+ * Smoke plumes shed from each drag source on the rider (shoulders, legs,
+ * clothing, helmet) and the bike (frame, wheels, tires). One pool per part;
+ * puff count, size, opacity and swirl follow that part's level and its share
+ * of the drag, so the rider's plumes dominate.
  */
 export class HotspotSmoke {
   readonly object: Points;
@@ -77,10 +78,13 @@ export class HotspotSmoke {
       const e = byKey.get(key);
       const start = k * pool;
       const level = e ? e.level : 0;
-      // Puff count grows with level; opacity with level² so clean parts go quiet fast.
-      const active = e ? Math.round(pool * (0.15 + 0.85 * level)) : 0;
-      const opacity = cfg.opacity * level * level * presence;
-      const sizeFactor = 0.5 + 0.9 * level;
+      const weight = e ? e.weight : 0;
+      // Big drag sources (the rider) get more, bigger, denser puffs; a dirtier
+      // option within a part raises all three. The level floor keeps the best
+      // option visible.
+      const active = e ? Math.round(pool * (0.2 + 0.8 * weight) * (0.3 + 0.7 * level)) : 0;
+      const opacity = cfg.opacity * (0.25 + 0.75 * level) * (0.45 + 0.55 * weight) * presence;
+      const sizeFactor = (0.45 + 0.9 * level) * (0.55 + 0.45 * weight);
 
       for (let j = 0; j < pool; j++) {
         const i = start + j;
@@ -94,7 +98,7 @@ export class HotspotSmoke {
           this.respawn(i, 0);
           along = 0;
         }
-        this.angle[i] = this.angle[i]! + this.spin[i]! * cfg.swirl * level * dt;
+        this.angle[i] = this.angle[i]! + this.spin[i]! * cfg.swirl * (0.3 + 0.7 * level) * dt;
 
         const r = emitterRadius(e, along) * this.radius[i]!;
         const wobble = cfg.jitter * level * emitterRadius(e, along);

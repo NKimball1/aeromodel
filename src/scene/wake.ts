@@ -22,13 +22,13 @@ export const WAKE_VISUAL = {
   /** Lateral half-width at the start of the wake, metres. */
   halfWidth: [0.2, 0.62],
   /** Multiplier on half the body's height. */
-  heightScale: [0.62, 1.15],
+  heightScale: [0.55, 0.92],
   /** Fraction of freestream speed lost at the wake centreline. */
   deficit: [0.35, 0.88],
   /** Turbulence amount, 0..1: swirl amplitude and frequency. */
   chaos: [0.15, 1.0],
   /** Peak opacity of the shed smoke. */
-  opacity: [0.24, 0.62],
+  opacity: [0.2, 0.5],
   /** How much wider/taller the wake grows by its far end (×). */
   spread: 1.6,
   /** Below this airspeed (m/s) the wake fades out entirely. */
