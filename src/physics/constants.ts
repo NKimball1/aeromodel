@@ -130,6 +130,51 @@ export const HELMET_CDA_DELTA: Record<Helmet, number> = {
 };
 
 // ---------------------------------------------------------------------------
+// CdA — frame / bike type (m²). Delta from a round-tube climbing frame with a
+// conventional stem and round bar, the kind of bike most published position
+// CdA values were measured on. Rider fit (saddle and bar position) is held
+// constant across bike types; only the bike changes.
+// ---------------------------------------------------------------------------
+
+export type BikeType = 'aero' | 'allRound' | 'climbing' | 'endurance';
+
+export const BIKE_TYPES: readonly BikeType[] = ['aero', 'allRound', 'climbing', 'endurance'];
+
+export interface BikeTypeSpec {
+  /** CdA delta from the climbing-frame baseline, m². */
+  cdaDelta: number;
+  /**
+   * ⚠️ Typical complete bike, size ~56, with pedals and cages, kg. Race bikes
+   * sit near the UCI 6.8 kg limit before pedals; aero frames run roughly
+   * 0.5–1 kg heavier; endurance bikes ~8–9 kg. NOT applied automatically:
+   * physics uses Environment.bikeMassKg. The UI can offer this as a default.
+   */
+  typicalMassKg: number;
+}
+
+/**
+ * ⚠️ Frame deltas are the most contested numbers in this file. Manufacturer
+ * claims for aero road frames are large. Independent tunnel tests of complete
+ * bikes with a dummy rider typically put aero road bikes roughly 10–20 W
+ * ahead of round-tube bikes at 45 km/h. At 45 km/h and rho 1.225,
+ * 1 W ≈ 0.00084 m², so that is ~0.008–0.017 m². Part of that saving is the
+ * integrated cockpit and hidden cables, which this model folds into the frame.
+ */
+export const BIKE_TYPE: Record<BikeType, BikeTypeSpec> = {
+  /** Kammtail tubes, dropped stays, integrated V-stem cockpit (think Cervélo S5). Lower half of the range. */
+  aero: { cdaDelta: -0.01, typicalMassKg: 7.8 },
+  /** ⚠️ Truncated-aero tubes on a lighter frame (think Cervélo Soloist). Guessed at half the aero saving. */
+  allRound: { cdaDelta: -0.005, typicalMassKg: 7.4 },
+  /** Baseline. Thin round tubes, conventional stem and bar (think Cervélo R5). */
+  climbing: { cdaDelta: 0, typicalMassKg: 7.0 },
+  /**
+   * ⚠️ Taller head tube, wider tire clearance, fender mounts (think Cervélo
+   * Caledonia). No good independent data; small penalty guessed at +0.003.
+   */
+  endurance: { cdaDelta: 0.003, typicalMassKg: 8.3 },
+};
+
+// ---------------------------------------------------------------------------
 // CdA — wheels (m²). Per-wheel objects so a yaw-dependent drag curve can be
 // added per wheel later without touching the composition logic in cda.ts.
 // ---------------------------------------------------------------------------

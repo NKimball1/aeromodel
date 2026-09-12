@@ -1,4 +1,5 @@
 import {
+  BIKE_TYPE,
   FRONT_WHEEL,
   HELMET_CDA_DELTA,
   KIT_CDA_DELTA,
@@ -21,11 +22,12 @@ export function computeCdABreakdown(config: RiderConfig, yawDeg = 0): CdABreakdo
   const position = POSITION_CDA[config.position];
   const kit = KIT_CDA_DELTA[config.kit];
   const helmet = HELMET_CDA_DELTA[config.helmet];
+  const frame = BIKE_TYPE[config.bikeType].cdaDelta;
   const frontWheel = FRONT_WHEEL[config.frontWheel].cdaDeltaZeroYaw;
   const rearWheel = REAR_WHEEL[config.rearWheel].cdaDeltaZeroYaw;
   const tireWidth = TIRE_WIDTH_CDA_DELTA[config.tireWidthMm];
-  const total = position + kit + helmet + frontWheel + rearWheel + tireWidth;
-  return { position, kit, helmet, frontWheel, rearWheel, tireWidth, total };
+  const total = position + kit + helmet + frame + frontWheel + rearWheel + tireWidth;
+  return { position, kit, helmet, frame, frontWheel, rearWheel, tireWidth, total };
 }
 
 /** Total CdA in m². See computeCdABreakdown for the yawDeg caveat. */

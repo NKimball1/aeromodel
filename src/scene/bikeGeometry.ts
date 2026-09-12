@@ -7,7 +7,7 @@
  * nudged up/down for other tire widths.
  *
  * These are "size 56 road bike, ~1.78 m rider" numbers chosen to look right,
- * not to match any particular frame.
+ * not to match any particular frame. Frame-specific points live in bikeTypes.ts.
  */
 
 export interface V2 {
@@ -29,8 +29,6 @@ export const RIM_BEAD_RADIUS = 0.311;
 export const REFERENCE_TIRE_WIDTH_M = 0.025;
 /** Axle height with the reference tire. Tire section is roughly as tall as it is wide. */
 export const AXLE_Y = RIM_BEAD_RADIUS + REFERENCE_TIRE_WIDTH_M;
-export const REAR_AXLE: V2 = { x: -0.41, y: AXLE_Y };
-export const FRONT_AXLE: V2 = { x: 0.585, y: AXLE_Y };
 /** Internal rim width, used for the rim cross-section. */
 export const RIM_WIDTH = 0.026;
 
@@ -49,14 +47,10 @@ export const SADDLE_TOP: V2 = {
   x: BB.x - SADDLE_HEIGHT * Math.cos(SEAT_TUBE_ANGLE_DEG * DEG),
   y: BB.y + SADDLE_HEIGHT * Math.sin(SEAT_TUBE_ANGLE_DEG * DEG),
 };
-/** Where the top tube meets the seat tube. */
-export const SEAT_CLUSTER: V2 = {
-  x: BB.x - 0.53 * Math.cos(SEAT_TUBE_ANGLE_DEG * DEG),
-  y: BB.y + 0.53 * Math.sin(SEAT_TUBE_ANGLE_DEG * DEG),
-};
 
-export const HEAD_TUBE_TOP: V2 = { x: 0.4, y: BB.y + 0.54 };
-export const HEAD_TUBE_BOTTOM: V2 = { x: 0.444, y: BB.y + 0.397 };
+// Axle positions, head tube, stays etc. vary by bike type: see bikeTypes.ts.
+// Everything in this file is shared by every bike: it's the rider's fit.
+
 /** Stem clamp at the handlebar centre. ~9 cm below the saddle top. */
 export const BAR_CLAMP: V2 = { x: 0.5, y: 0.85 };
 export const BAR_HALF_WIDTH = 0.2;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BIKE_TYPE,
   FRONT_WHEEL,
   FRONT_WHEEL_DEPTHS,
   HELMET_CDA_DELTA,
@@ -25,6 +26,7 @@ describe('computeCdA', () => {
     const b = computeCdABreakdown(cfg());
     expect(b.kit).toBe(0);
     expect(b.helmet).toBe(0);
+    expect(b.frame).toBe(0);
     expect(b.frontWheel).toBe(0);
     expect(b.rearWheel).toBe(0);
     expect(b.tireWidth).toBe(0);
@@ -62,6 +64,20 @@ describe('computeCdA', () => {
     expect(HELMET_CDA_DELTA.road).toBeLessThanOrEqual(HELMET_CDA_DELTA.none);
   });
 
+  it('frames are ordered aero < all-round < climbing < endurance', () => {
+    const order = ['aero', 'allRound', 'climbing', 'endurance'] as const;
+    for (let i = 1; i < order.length; i++) {
+      expect(computeCdA(cfg({ bikeType: order[i]! }))).toBeGreaterThan(computeCdA(cfg({ bikeType: order[i - 1]! })));
+    }
+  });
+
+  it('aero frame saving vs the climbing baseline sits in the ~0.008–0.017 m² independent-test range', () => {
+    const saving = computeCdA(cfg({ bikeType: 'climbing' })) - computeCdA(cfg({ bikeType: 'aero' }));
+    expect(saving).toBeGreaterThanOrEqual(0.008);
+    expect(saving).toBeLessThanOrEqual(0.017);
+    expect(BIKE_TYPE.climbing.cdaDelta).toBe(0);
+  });
+
   it('deeper wheels never add drag, and the best pair saves 0.005–0.010 vs box', () => {
     for (let i = 1; i < FRONT_WHEEL_DEPTHS.length; i++) {
       expect(FRONT_WHEEL[FRONT_WHEEL_DEPTHS[i]!].cdaDeltaZeroYaw).toBeLessThanOrEqual(
@@ -92,9 +108,9 @@ describe('computeCdA', () => {
 
   it('breakdown parts sum to the total', () => {
     const b = computeCdABreakdown(
-      cfg({ position: 'tt', kit: 'skinsuit', helmet: 'aero', frontWheel: 'deep', rearWheel: 'disc', tireWidthMm: 28 }),
+      cfg({ position: 'tt', kit: 'skinsuit', helmet: 'aero', bikeType: 'aero', frontWheel: 'deep', rearWheel: 'disc', tireWidthMm: 28 }),
     );
-    const sum = b.position + b.kit + b.helmet + b.frontWheel + b.rearWheel + b.tireWidth;
+    const sum = b.position + b.kit + b.helmet + b.frame + b.frontWheel + b.rearWheel + b.tireWidth;
     expect(sum).toBeCloseTo(b.total, 12);
   });
 });

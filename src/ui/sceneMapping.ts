@@ -27,6 +27,7 @@ export function sceneStateFor(config: RiderConfig, env: Environment): SceneState
     position: config.position,
     kit: config.kit,
     helmet: config.helmet,
+    bikeType: config.bikeType,
     frontWheel: config.frontWheel,
     rearWheel: config.rearWheel,
     tireWidthMm: config.tireWidthMm,

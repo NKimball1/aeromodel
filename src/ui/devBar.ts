@@ -4,6 +4,7 @@
  * real grouped panel and readout in checkpoint 3.
  */
 import {
+  BIKE_TYPES,
   FRONT_WHEEL_DEPTHS,
   HELMETS,
   KITS,
@@ -14,6 +15,7 @@ import {
 } from '../physics';
 import { CAMERA_VIEWS, type CameraView } from '../scene';
 import {
+  BIKE_TYPE_LABELS,
   FRONT_WHEEL_LABELS,
   HELMET_LABELS,
   KIT_LABELS,
@@ -74,6 +76,7 @@ export function mountDevBar(
   title.textContent = 'Checkpoint 2 dev controls';
   bar.appendChild(title);
 
+  select('bikeType', 'Bike', BIKE_TYPES, BIKE_TYPE_LABELS);
   select('position', 'Position', POSITIONS, POSITION_LABELS);
   select('kit', 'Kit', KITS, KIT_LABELS);
   select('helmet', 'Helmet', HELMETS, HELMET_LABELS);

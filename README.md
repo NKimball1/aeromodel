@@ -31,13 +31,15 @@ src/
     defaults.ts   default rider config + environment
     __tests__/    sanity points, monotonicity, inversion, real-ride validation
   scene/          Three.js lives here and only here
-    bikeGeometry.ts  bike + body dimensions, grip targets (pure data)
+    bikeGeometry.ts  rider fit: BB, saddle, bar clamp, body segments, grips (pure data)
+    bikeTypes.ts     per-type frame styles + layout solver (pure, clearance-tested)
+    speedVisuals.ts  shared time scale + streak/blur tuning for exaggerated speed
     pose.ts          pose params, presets, 2-bone IK skeleton solver (pure, tested)
     rider.ts         mannequin from capsules; kit inflate + fabric flutter shader; helmets
-    bike.ts          frame, cockpit, cranks, aerobars that follow the elbows
-    wheel.ts         lathe-profile rims by depth, disc, tire torus by width, spokes
+    bike.ts          frame per type (Kammtail/oval/round tubes), cockpit, disc brakes, drivetrain, aerobars
+    wheel.ts         lathe rims by depth, disc, tire by width, rotors, spoke blur at speed
     wind.ts          streak particles flowing +X to -X, speed from airspeed
-    environment.ts   tunnel floor, grid, lights, speed arrow
+    environment.ts   tunnel, rolling tarmac road (procedural texture), lights, speed arrow
     cameraRig.ts     orbit camera + side / 3/4 front / rear-wake presets
     AeroScene.ts     render loop; takes a SceneState, never calls physics
   ui/
@@ -94,6 +96,12 @@ the composition.
   neck angle, head drop, head pitch, hip forward, grip target). Switching presets
   eases between the numbers. The pose tests check that hands land on the bar,
   bones keep their length, and knee angles stay realistic, so retune there.
+- Bike types (aero, all-round aero, climbing, endurance) share the rider's fit: BB,
+  saddle and bar clamp never move, so every pose preset works on every bike. The frame,
+  spacers and stem change around the rider. Frame type also adds a CdA delta in physics.
+- Speed is deliberately exaggerated. Road scroll, wheel spin and air particles all run at
+  `SPEED_VISUAL.timeScale` (1.6x real) so they agree with each other, and air streak
+  length grows with airspeed squared. Cadence stays real.
 - In dev builds `window.aero` is the scene. `aero.advance(seconds)` steps the
   simulation without animation frames, which helps when the tab is throttled.
 

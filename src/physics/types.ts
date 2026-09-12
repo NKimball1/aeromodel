@@ -1,4 +1,5 @@
 import type {
+  BikeType,
   FrontWheelDepth,
   Helmet,
   Kit,
@@ -13,6 +14,7 @@ export interface RiderConfig {
   position: Position;
   kit: Kit;
   helmet: Helmet;
+  bikeType: BikeType;
   frontWheel: FrontWheelDepth;
   rearWheel: WheelDepth;
   tireWidthMm: TireWidth;
@@ -47,6 +49,7 @@ export interface CdABreakdown {
   position: number;
   kit: number;
   helmet: number;
+  frame: number;
   frontWheel: number;
   rearWheel: number;
   tireWidth: number;

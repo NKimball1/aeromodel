@@ -12,6 +12,7 @@ export const defaultConfig: RiderConfig = {
   position: 'hoods',
   kit: 'tightJersey',
   helmet: 'road',
+  bikeType: 'climbing',
   frontWheel: 'box',
   rearWheel: 'box',
   tireWidthMm: 25,

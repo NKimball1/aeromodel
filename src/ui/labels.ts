@@ -1,6 +1,7 @@
 import {
   FRONT_WHEEL,
   REAR_WHEEL,
+  type BikeType,
   type FrontWheelDepth,
   type Helmet,
   type Kit,
@@ -15,6 +16,13 @@ export const POSITION_LABELS: Record<Position, string> = {
   drops: 'Drops',
   hoods: 'Hoods',
   upright: 'Upright',
+};
+
+export const BIKE_TYPE_LABELS: Record<BikeType, string> = {
+  aero: 'Aero',
+  allRound: 'All-round aero',
+  climbing: 'Climbing',
+  endurance: 'Endurance',
 };
 
 export const KIT_LABELS: Record<Kit, string> = {

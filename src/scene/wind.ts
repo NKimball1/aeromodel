@@ -7,6 +7,7 @@ import {
   LineSegments,
 } from 'three';
 import { PALETTE } from './materials';
+import { SPEED_VISUAL } from './speedVisuals';
 
 const BASE_COLOR = new Color(PALETTE.wind);
 
@@ -21,10 +22,6 @@ export const WIND_VISUAL = {
   yMin: 0.04,
   yMax: 2.1,
   zHalf: 1.3,
-  /** Displayed particle speed per m/s of real airspeed. Real speed is too fast to read. */
-  speedScale: 0.32,
-  /** Streak length = displayed speed × this, seconds. */
-  trailSeconds: 0.12,
   /** Distance over which particles fade in/out at the volume ends, metres. */
   edgeFade: 0.8,
   headAlpha: 0.55,
@@ -70,7 +67,10 @@ export class WindField {
     const { cfg, heads, jitter, positions, colors } = this;
     const base = BASE_COLOR;
     const n = cfg.count;
-    const flow = -airSpeedMs * cfg.speedScale;
+    const flow = -airSpeedMs * SPEED_VISUAL.timeScale;
+    // Streaks lengthen with airspeed on top of moving faster: length ~ speed².
+    const trailFactor = Math.max(SPEED_VISUAL.minTrailFactor, Math.abs(airSpeedMs) / SPEED_VISUAL.trailReferenceMs);
+    const trailSeconds = SPEED_VISUAL.trailSeconds * trailFactor;
     const span = cfg.xMax - cfg.xMin;
 
     for (let i = 0; i < n; i++) {
@@ -90,7 +90,7 @@ export class WindField {
       const z = heads[i3 + 2]!;
 
       // Tail trails upstream of the head. Keep a minimum so still air shows dots.
-      const trail = -vx * cfg.trailSeconds;
+      const trail = -vx * trailSeconds;
       const tailX = x + (Math.abs(trail) < 0.015 ? 0.015 : trail);
 
       const i6 = i * 6;

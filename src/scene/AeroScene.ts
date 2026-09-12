@@ -1,11 +1,12 @@
 import { Group, PCFSoftShadowMap, Scene, WebGLRenderer } from 'three';
-import type { FrontWheelDepth, Helmet, Kit, Position, TireWidth, WheelDepth } from '../physics';
+import type { BikeType, FrontWheelDepth, Helmet, Kit, Position, TireWidth, WheelDepth } from '../physics';
 import { REFERENCE_TIRE_WIDTH_M } from './bikeGeometry';
 import { BikeModel } from './bike';
 import { CameraRig, type CameraView } from './cameraRig';
 import { TunnelEnvironment } from './environment';
 import { POSE_PRESETS, lerpPose, solveSkeleton, type PoseParams } from './pose';
 import { RiderModel } from './rider';
+import { SPEED_VISUAL } from './speedVisuals';
 import { WindField } from './wind';
 
 /**
@@ -16,6 +17,7 @@ export interface SceneState {
   position: Position;
   kit: Kit;
   helmet: Helmet;
+  bikeType: BikeType;
   frontWheel: FrontWheelDepth;
   rearWheel: WheelDepth;
   tireWidthMm: TireWidth;
@@ -57,7 +59,7 @@ export class AeroScene {
     container.appendChild(this.renderer.domElement);
 
     this.rig = new CameraRig(this.renderer.domElement, 'threeQuarter');
-    this.env = new TunnelEnvironment(this.scene);
+    this.env = new TunnelEnvironment(this.scene, this.renderer.capabilities.getMaxAnisotropy());
 
     this.bikeRoot.add(this.bike.group, this.rider.group);
     this.scene.add(this.bikeRoot, this.wind.object);
@@ -106,6 +108,7 @@ export class AeroScene {
 
   private applyEquipment(): void {
     const s = this.state;
+    this.bike.setType(s.bikeType);
     this.bike.setWheels(s.frontWheel, s.rearWheel);
     this.bike.setTireWidth(s.tireWidthMm);
     this.rider.setKit(s.kit);
@@ -125,8 +128,10 @@ export class AeroScene {
     this.crankAngle -= dt * (s.cadenceRpm / 60) * Math.PI * 2;
     const skeleton = solveSkeleton(this.pose, this.crankAngle);
 
+    const displayedGround = s.groundSpeedMs * SPEED_VISUAL.timeScale;
     this.rider.update(skeleton, dt, s.airSpeedMs);
-    this.bike.update(dt, s.groundSpeedMs, skeleton, this.pose.aerobars);
+    this.bike.update(dt, displayedGround, skeleton, this.pose.aerobars);
+    this.env.update(dt, displayedGround);
     this.wind.update(dt, s.airSpeedMs);
     this.rig.update(dt);
     this.renderer.render(this.scene, this.rig.camera);

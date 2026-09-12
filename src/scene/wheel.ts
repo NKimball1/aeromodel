@@ -2,25 +2,33 @@ import {
   BoxGeometry,
   BufferGeometry,
   CylinderGeometry,
+  DoubleSide,
   Float32BufferAttribute,
   Group,
   LatheGeometry,
   LineBasicMaterial,
   LineSegments,
   Mesh,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
+  RingGeometry,
   TorusGeometry,
   Vector2,
 } from 'three';
 import { RIM_BEAD_RADIUS, RIM_WIDTH } from './bikeGeometry';
-import { materials } from './materials';
+import { PALETTE, materials } from './materials';
+import { SPEED_VISUAL, smoothstep } from './speedVisuals';
 
 const HUB_FLANGE_RADIUS = 0.028;
 const HUB_FLANGE_OFFSET = 0.032;
 const DISC_HUB_RADIUS = 0.035;
+/** Brake rotors sit on the non-drive (left, −Z) side. */
+const ROTOR_Z = -0.058;
 
 /**
  * A wheel built in the XY plane with its axle along Z. Rim depth and tire
- * width can be changed at runtime; geometry is rebuilt on change.
+ * width can be changed at runtime; geometry is rebuilt on change. Spokes and
+ * decals fade into a translucent blur disc as the wheel spins faster.
  */
 export class WheelModel {
   readonly group = new Group();
@@ -28,18 +36,34 @@ export class WheelModel {
   private rim: Mesh | null = null;
   private tire: Mesh | null = null;
   private spokes: LineSegments | null = null;
+  private blur: Mesh | null = null;
   private decals: Mesh[] = [];
+  private readonly spokeMaterial = new LineBasicMaterial({ color: 0x55595f, transparent: true });
+  private readonly decalMaterial = new MeshStandardMaterial({ color: PALETTE.decal, roughness: 0.6, transparent: true });
+  private readonly blurMaterial = new MeshBasicMaterial({
+    color: 0x6a6f76,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    side: DoubleSide,
+  });
   private angle = 0;
   private depthMm = -1;
   private disc = false;
   private tireWidthMm = -1;
 
-  constructor() {
+  constructor(rotorRadius: number) {
     this.group.add(this.spinGroup);
     const hub = new Mesh(new CylinderGeometry(0.018, 0.018, 0.1, 16), materials.alloy);
     hub.rotation.x = Math.PI / 2;
     hub.castShadow = true;
     this.spinGroup.add(hub);
+
+    const rotor = new Mesh(new RingGeometry(rotorRadius - 0.017, rotorRadius, 48), materials.alloy);
+    rotor.position.z = ROTOR_Z;
+    const carrier = new Mesh(new RingGeometry(0.02, rotorRadius - 0.017, 6), materials.component);
+    carrier.position.z = ROTOR_Z;
+    this.spinGroup.add(rotor, carrier);
   }
 
   /** Outer tire radius, for converting ground speed to wheel spin. */
@@ -52,7 +76,13 @@ export class WheelModel {
     this.depthMm = depthMm;
     this.disc = disc;
     this.disposeMesh(this.rim);
-    this.disposeSpokes();
+    this.disposeMesh(this.blur);
+    this.blur = null;
+    if (this.spokes) {
+      this.spokes.removeFromParent();
+      this.spokes.geometry.dispose();
+      this.spokes = null;
+    }
     for (const d of this.decals) this.disposeMesh(d);
     this.decals = [];
 
@@ -66,16 +96,19 @@ export class WheelModel {
     this.spinGroup.add(this.rim);
 
     if (!disc) {
-      this.spokes = buildSpokes(depth, depthMm <= 30 ? 28 : depthMm <= 50 ? 24 : 20);
+      this.spokes = buildSpokes(depth, depthMm <= 30 ? 28 : depthMm <= 50 ? 24 : 20, this.spokeMaterial);
       this.spinGroup.add(this.spokes);
+      this.blur = new Mesh(new RingGeometry(0.03, RIM_BEAD_RADIUS - depth, 48), this.blurMaterial);
+      this.blur.renderOrder = 1;
+      this.group.add(this.blur);
     }
 
     // A pale decal on each rim face so rotation is visible on deep rims and discs.
     if (deep) {
-      const midR = RIM_BEAD_RADIUS - Math.min(depth, 0.08) * 0.5;
+      const band = Math.min(depth, 0.08);
       for (const side of [1, -1]) {
-        const decal = new Mesh(new BoxGeometry(0.09, Math.min(depth, 0.08) * 0.35, 0.002), materials.decal);
-        decal.position.set(0, midR, side * (RIM_WIDTH * 0.55 + (disc ? 0.004 : 0.002)));
+        const decal = new Mesh(new BoxGeometry(0.09, band * 0.35, 0.002), this.decalMaterial);
+        decal.position.set(0, RIM_BEAD_RADIUS - band * 0.5, side * (RIM_WIDTH * 0.55 + (disc ? 0.004 : 0.002)));
         this.decals.push(decal);
         this.spinGroup.add(decal);
       }
@@ -88,30 +121,28 @@ export class WheelModel {
     this.disposeMesh(this.tire);
     const w = widthMm / 1000;
     // Tire section roughly as tall as it is wide, sitting on the bead seat.
-    const geo = new TorusGeometry(RIM_BEAD_RADIUS + w / 2, w / 2, 14, 96);
-    this.tire = new Mesh(geo, materials.tire);
+    this.tire = new Mesh(new TorusGeometry(RIM_BEAD_RADIUS + w / 2, w / 2, 14, 96), materials.tire);
     this.tire.castShadow = true;
     this.spinGroup.add(this.tire);
   }
 
-  /** Advance rotation for a bike moving +X at `groundSpeedMs`. */
-  roll(dt: number, groundSpeedMs: number): void {
-    this.angle += (dt * groundSpeedMs) / this.outerRadius;
+  /** Advance rotation for a bike moving +X at the displayed ground speed. */
+  roll(dt: number, displayedSpeedMs: number): void {
+    const omega = displayedSpeedMs / this.outerRadius;
+    this.angle += dt * omega;
     // Moving +X, viewed from +Z, a wheel turns clockwise: negative about Z.
     this.spinGroup.rotation.z = -this.angle;
+
+    const blur = smoothstep(SPEED_VISUAL.wheelBlurStart, SPEED_VISUAL.wheelBlurFull, Math.abs(omega));
+    this.spokeMaterial.opacity = 1 - 0.85 * blur;
+    this.decalMaterial.opacity = 1 - 0.9 * blur;
+    this.blurMaterial.opacity = 0.3 * blur;
   }
 
   private disposeMesh(mesh: Mesh | null): void {
     if (!mesh) return;
     mesh.removeFromParent();
     mesh.geometry.dispose();
-  }
-
-  private disposeSpokes(): void {
-    if (!this.spokes) return;
-    this.spokes.removeFromParent();
-    this.spokes.geometry.dispose();
-    this.spokes = null;
   }
 }
 
@@ -145,7 +176,7 @@ function rimProfile(depth: number, disc: boolean): Vector2[] {
   ];
 }
 
-function buildSpokes(depth: number, count: number): LineSegments {
+function buildSpokes(depth: number, count: number, material: LineBasicMaterial): LineSegments {
   const inner = RIM_BEAD_RADIUS - depth;
   const pts: number[] = [];
   for (let i = 0; i < count; i++) {
@@ -164,5 +195,5 @@ function buildSpokes(depth: number, count: number): LineSegments {
   }
   const geo = new BufferGeometry();
   geo.setAttribute('position', new Float32BufferAttribute(pts, 3));
-  return new LineSegments(geo, new LineBasicMaterial({ color: 0x55595f }));
+  return new LineSegments(geo, material);
 }
