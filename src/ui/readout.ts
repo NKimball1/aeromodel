@@ -4,22 +4,11 @@
  */
 import type { AppState } from './appState';
 import type { Comparison } from './baseline';
-import { buildChartModel } from './chartModel';
+import { BREAKDOWN_SERIES } from './breakdownSeries';
+import { buildShareModel } from './chartModel';
 import type { Evaluation } from './evaluate';
 import { SPEED_UNIT_LABEL, signed, speedText, toSpeedUnit } from './format';
-import { PowerChart } from './powerChart';
-
-/**
- * Categorical slots 1–4 of the validated reference palette, in fixed order.
- * Adjacent-pair CVD/normal-vision checks pass; aqua and yellow are under 3:1
- * on the surface, so every segment's value is also printed in the legend.
- */
-export const BREAKDOWN_SERIES = [
-  { key: 'aero', label: 'Aero', color: '#2a78d6' },
-  { key: 'rolling', label: 'Rolling', color: '#eb6834' },
-  { key: 'gravity', label: 'Gravity', color: '#1baf7a' },
-  { key: 'drivetrain', label: 'Drivetrain', color: '#eda100' },
-] as const;
+import { ShareChart } from './shareChart';
 
 export interface ReadoutActions {
   onPin: () => void;
@@ -44,7 +33,7 @@ export class Readout {
   private readonly legend = el('ul', 'stack-legend');
   private readonly tooltip = el('div', 'stack-tooltip');
   private readonly baseline = el('div', 'baseline');
-  private readonly chart: PowerChart;
+  private readonly chart: ShareChart;
 
   constructor(container: HTMLElement, private readonly actions: ReadoutActions) {
     this.element.setAttribute('aria-live', 'polite');
@@ -63,7 +52,7 @@ export class Readout {
     breakdown.append(title, barWrap, this.legend);
 
     this.element.append(hero, this.tiles, breakdown, this.baseline);
-    this.chart = new PowerChart(this.element);
+    this.chart = new ShareChart(this.element);
 
     const footer = el('div', 'readout-footer');
     const sources = el('button', 'link-button', 'Sources & validation');
@@ -89,7 +78,7 @@ export class Readout {
     this.renderTiles(state, ev);
     this.renderBreakdown(ev);
     this.renderBaseline(state, cmp);
-    this.chart.update(state, buildChartModel(state, ev, cmp?.baseline ?? null));
+    this.chart.update(state, buildShareModel(state, ev, cmp?.baseline ?? null));
   }
 
   private renderTiles(state: AppState, ev: Evaluation): void {

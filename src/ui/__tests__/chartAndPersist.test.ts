@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { powerFromSpeed, kmhToMs } from '../../physics';
+import { kmhToMs } from '../../physics';
 import { currentSetup, initialAppState, type AppState } from '../appState';
 import { compare } from '../baseline';
-import { buildChartModel, niceStep, niceTicks, powerCurve, valueAt } from '../chartModel';
-import { evaluate, rideConditions } from '../evaluate';
+import { SHARE_KEYS, buildShareModel, findCrossover, nearestPoint, niceStep, niceTicks } from '../chartModel';
+import { evaluate } from '../evaluate';
 import { STORAGE_KEY, loadState, sanitizeState, saveState } from '../persist';
 
 const state = (over: Partial<AppState> = {}): AppState => ({ ...initialAppState, ...over });
@@ -25,43 +25,65 @@ describe('niceTicks', () => {
   });
 });
 
-describe('buildChartModel', () => {
-  it('has only the current curve without a baseline, and it passes through the operating point', () => {
-    const s = state({ hold: 'power', targetPowerW: 250 });
-    const ev = evaluate(s);
-    const m = buildChartModel(s, ev, null);
-    expect(m.series.map((x) => x.key)).toEqual(['current']);
-    const marker = m.markers[0]!;
-    expect(valueAt(m.series[0]!.points, marker.point.speed)).toBeCloseTo(250, -1);
-    expect(m.xMax).toBeGreaterThan(marker.point.speed);
-    expect(m.yMax).toBeGreaterThanOrEqual(Math.max(...m.series[0]!.points.map((p) => p.powerW)));
+describe('buildShareModel', () => {
+  const model = (over: Partial<AppState> = {}) => {
+    const s = state(over);
+    return buildShareModel(s, evaluate(s), null);
+  };
+
+  it('shares add up to 100 % at every sampled speed', () => {
+    for (const p of model().points) {
+      const sum = SHARE_KEYS.reduce((acc, k) => acc + p.shares[k], 0);
+      expect(sum).toBeCloseTo(1, 9);
+    }
   });
 
-  it('adds the baseline curve and marker once pinned; a tuck curve sits below it', () => {
-    const pinned = { ...state({ hold: 'speed', speedMs: kmhToMs(40) }), baseline: currentSetup(state()) };
-    const tucked = { ...pinned, config: { ...pinned.config, position: 'tt' as const } };
+  it('on the flat, the air takes a growing share as speed rises', () => {
+    const pts = model().points;
+    for (let i = 1; i < pts.length; i++) expect(pts[i]!.shares.aero).toBeGreaterThanOrEqual(pts[i - 1]!.shares.aero);
+    expect(nearestPoint(pts, 10).shares.aero).toBeLessThan(0.4);
+    expect(nearestPoint(pts, 50).shares.aero).toBeGreaterThan(0.85);
+  });
+
+  it('finds the air/rolling crossover where the physics puts it (~15 km/h for the default rider)', () => {
+    // 0.5·rho·CdA·v² = Crr·m·g  →  v = sqrt(0.0045·83·9.80665 / (0.5·1.225·0.34)) ≈ 4.19 m/s ≈ 15.1 km/h
+    const m = model();
+    expect(m.crossover.kind).toBe('at');
+    expect(Math.abs(m.crossover.speed! - 15.1)).toBeLessThan(0.5);
+    expect(m.detail).toBe('Air outweighs rolling resistance above 15 km/h.');
+  });
+
+  it('headline quotes the aero share at the current speed', () => {
+    const m = model({ hold: 'speed', speedMs: kmhToMs(40) });
+    expect(m.headline).toMatch(/^At 40 km\/h, \d+% of your effort goes into the air\.$/);
+    expect(m.current.shares.aero).toBeGreaterThan(0.8);
+  });
+
+  it('on a steep climb the headline switches to gravity', () => {
+    const m = model({ hold: 'power', targetPowerW: 250, gradePct: 8 });
+    expect(m.current.shares.gravity).toBeGreaterThan(m.current.shares.aero);
+    expect(m.headline).toMatch(/^On this 8\.0% grade, gravity takes \d+% of your effort/);
+  });
+
+  it('a strong headwind makes the air dominant at every speed', () => {
+    expect(findCrossover(model({ headwindMs: 8 }).points).kind).toBe('always');
+  });
+
+  it('with a baseline, an aero change saves more the faster you go (cubically)', () => {
+    const pinned = { ...state({ hold: 'power', targetPowerW: 200 }), baseline: currentSetup(state()) };
+    const tucked = { ...pinned, config: { ...pinned.config, position: 'drops' as const } };
     const cmp = compare(tucked)!;
-    const m = buildChartModel(tucked, cmp.current, cmp.baseline);
-    expect(m.series.map((x) => x.key)).toEqual(['current', 'baseline']);
-    expect(m.markers).toHaveLength(2);
-    const cur = m.series[0]!.points;
-    const base = m.series[1]!.points;
-    expect(valueAt(cur, 40)).toBeLessThan(valueAt(base, 40));
+    const m = buildShareModel(tucked, cmp.current, cmp.baseline);
+    const at = (v: number) => m.savings!.find((x) => x.speed === v)!.watts;
+    expect(at(20)).toBeGreaterThan(0);
+    // Same tires and mass, so the saving is pure aero: ∝ v³ → (50/20)³ = 15.6.
+    expect(at(50) / at(20)).toBeCloseTo(15.625, 1);
+    expect(model().savings).toBeNull();
   });
 
-  it('samples power exactly as the physics does, in the display unit', () => {
-    const s = state({ units: { speed: 'mph', mass: 'kg' } });
-    const pts = powerCurve(s, currentSetup(s), 40);
-    const p = pts.find((x) => Math.abs(x.speed - 20) < 1e-9) ?? pts[36]!;
-    const expected = powerFromSpeed({ ...rideConditions(s), speedMs: p.speed / 2.2369362920544 }, s.config).total;
-    expect(p.powerW).toBeCloseTo(expected, 6);
-  });
-
-  it('extends the y axis below zero on a descent', () => {
-    const s = state({ hold: 'power', targetPowerW: 0, gradePct: -6 });
-    const m = buildChartModel(s, evaluate(s), null);
-    expect(m.yMin).toBeLessThan(0);
-    expect(m.yTicks).toContain(0);
+  it('shows no shares when stopped', () => {
+    const m = model({ hold: 'power', targetPowerW: 0 });
+    expect(m.headline).toMatch(/^Stopped/);
   });
 });
 

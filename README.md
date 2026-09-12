@@ -56,8 +56,9 @@ src/
     store.ts         tiny state container
     controlPanel.ts  lil-gui grouped controls (Ride, Rider, Position, Kit, Bike, Environment, Units & view)
     readout.ts       hero number, W/kg + CdA + Crr tiles, power breakdown bar, baseline delta
-    chartModel.ts    power-vs-speed curves, axis ranges, ticks; pure, tested
-    powerChart.ts    hand-built SVG chart with hover crosshair, tooltip and table view
+    chartModel.ts    share of effort by speed, air/rolling crossover, headline, savings; pure, tested
+    shareChart.ts    hand-built SVG 100% stacked area chart with hover, labels and table view
+    breakdownSeries.ts  the four power sinks and their shared colours
     persist.ts       remembers setup + baseline in localStorage, validated on load; tested
     sourcesDialog.ts small "Sources & validation" window
     sceneMapping.ts  physics output to SceneState (cadence from power, airspeed)
@@ -119,9 +120,12 @@ the composition.
   bike mass; ride conditions and rider mass are shared.
 - **Bike type pre-fills bike mass** with a typical weight for that frame. Override it after.
 - **W/kg** uses rider mass only.
-- **Power vs speed chart.** The current setup's curve (blue) over the baseline's (gray),
-  with dots where you're riding. Hover for both values and the difference at any speed;
-  "Show as table" lists them every 5 or 10 units.
+- **Where the power goes as speed rises.** A 100% stacked chart of each power sink's share
+  of your effort across speed, marked where you're riding. The headline gives the air's
+  share now and the speed where the air overtakes rolling resistance; on a climb it
+  switches to gravity. With a baseline pinned, a row shows what your changes save or
+  cost at 20, 30, 40 and 50 km/h (12–30 mph), so the cubic growth of aero savings is
+  visible. Hover for every share; "Show as table" lists them.
 - **Your setup is remembered** in this browser, including the pinned baseline.
   "Units & view → Reset everything to defaults" starts over.
 

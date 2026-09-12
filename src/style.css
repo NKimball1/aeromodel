@@ -363,14 +363,6 @@ body,
   gap: 6px;
 }
 
-.line-key {
-  display: inline-block;
-  width: 14px;
-  height: 2px;
-  border-radius: 1px;
-  flex: none;
-}
-
 .chart-plot {
   position: relative;
   width: 100%;
@@ -399,11 +391,84 @@ body,
   font-variant-numeric: tabular-nums;
 }
 
-.chart-plot .series {
+.chart-headline {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.chart-detail {
+  margin: 0 0 6px;
+  color: var(--text-secondary);
+}
+
+.chart-plot .layer-gap {
   fill: none;
+  stroke: var(--surface-1);
   stroke-width: 2;
   stroke-linejoin: round;
-  stroke-linecap: round;
+}
+
+.chart-plot .band-label {
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.chart-plot .now-line {
+  stroke: var(--text-primary);
+  stroke-width: 1.5;
+  opacity: 0.7;
+}
+
+.chart-plot .now-label {
+  fill: var(--text-primary);
+  font-size: 10px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--surface-1);
+  stroke-width: 3px;
+}
+
+.chart-savings {
+  margin-top: 8px;
+}
+
+.chart-savings[hidden] {
+  display: none;
+}
+
+.chart-savings-title {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.chart-savings-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.chart-savings-value {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.chart-savings-value.is-better {
+  color: var(--good-text);
+}
+
+.chart-savings-value.is-worse {
+  color: var(--critical-text);
+}
+
+.chart-savings-speed,
+.chart-savings-empty {
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 /* 2px surface ring keeps markers legible where they sit on a line. */
@@ -413,8 +478,8 @@ body,
 }
 
 .chart-plot .crosshair {
-  stroke: #c3c2b7;
-  stroke-width: 1;
+  stroke: var(--surface-1);
+  stroke-width: 1.5;
 }
 
 .chart-tooltip {
