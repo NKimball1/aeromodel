@@ -9,6 +9,7 @@ import { RiderModel } from './rider';
 import { SPEED_VISUAL } from './speedVisuals';
 import { bodyExtent, dragLevel, wakeShape, type WakeShape } from './wake';
 import { WakeSmoke } from './wakeSmoke';
+import { riderColliders } from './deflection';
 import { WindField } from './wind';
 
 /**
@@ -156,7 +157,7 @@ export class AeroScene {
     this.wakeLevel += (dragLevel(s.cda) - this.wakeLevel) * (1 - Math.exp(-dt * WAKE_EASE_RATE));
     const wake = wakeShape(this.wakeLevel, bodyExtent(skeleton, HEAD_RADIUS), s.airSpeedMs);
     this.wake = wake;
-    this.wind.update(dt, s.airSpeedMs, wake);
+    this.wind.update(dt, s.airSpeedMs, wake, riderColliders(skeleton, HEAD_RADIUS));
     this.smoke.update(dt, s.airSpeedMs, wake);
     this.rig.update(dt);
     this.renderer.render(this.scene, this.rig.camera);

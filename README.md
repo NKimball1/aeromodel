@@ -14,8 +14,8 @@ Vite + TypeScript + Three.js. No backend.
 | 1. Physics module + constants + tests | done |
 | 2. Primitive rider, pose presets, pedaling, basic particle flow | done |
 | 3. Controls wired to readout + baseline delta | done |
-| 4. Wake responding to CdA | done, awaiting review |
-| 5. Particle deflection, chart, polish | not started |
+| 4. Wake responding to CdA | done |
+| 5. Particle deflection, chart, polish | done |
 
 ## Layout
 
@@ -39,6 +39,7 @@ src/
     bike.ts          frame per type (Kammtail/oval/round tubes), cockpit, disc brakes, drivetrain, aerobars
     wheel.ts         lathe rims by depth, disc, tire by width, rotors, spoke blur at speed
     wind.ts          streak particles +X to -X; slow, swirl and tint inside the wake
+    deflection.ts    body capsules from the skeleton; pushes streaks around the rider; pure, tested
     wake.ts          CdA -> wake shape (length, width, deficit, chaos, opacity); pure, tested
     wakeSmoke.ts     soft smoke puffs shed from the rider's back (custom point shader)
     environment.ts   tunnel, rolling tarmac road (procedural texture), lights, speed arrow
@@ -52,6 +53,9 @@ src/
     store.ts         tiny state container
     controlPanel.ts  lil-gui grouped controls (Ride, Rider, Position, Kit, Bike, Environment, Units & view)
     readout.ts       hero number, W/kg + CdA + Crr tiles, power breakdown bar, baseline delta
+    chartModel.ts    power-vs-speed curves, axis ranges, ticks; pure, tested
+    powerChart.ts    hand-built SVG chart with hover crosshair, tooltip and table view
+    persist.ts       remembers setup + baseline in localStorage, validated on load; tested
     sceneMapping.ts  physics output to SceneState (cadence from power, airspeed)
     labels.ts        display names for presets
 scripts/
@@ -109,6 +113,11 @@ the composition.
   bike mass; ride conditions and rider mass are shared.
 - **Bike type pre-fills bike mass** with a typical weight for that frame. Override it after.
 - **W/kg** uses rider mass only.
+- **Power vs speed chart.** The current setup's curve (blue) over the baseline's (gray),
+  with dots where you're riding. Hover for both values and the difference at any speed;
+  "Show as table" lists them every 5 or 10 units.
+- **Your setup is remembered** in this browser, including the pinned baseline.
+  "Units & view → Reset everything to defaults" starts over.
 
 ## Scene notes
 
@@ -128,6 +137,9 @@ the composition.
   velocity deficit, turbulence and smoke opacity all scale with it, deliberately
   exaggerated. Its height comes from the rider's pose, so a tuck also lowers it. Tuning
   lives in `WAKE_VISUAL` (wake.ts), `WIND_VISUAL` (wind.ts) and `SMOKE_VISUAL` (wakeSmoke.ts).
+- Deflection is deliberately coarse: torso, head, arms and legs are capsules rebuilt from
+  the skeleton each frame, and each streak end near one is pushed outward with a smooth
+  falloff. No flow solving. Tuning lives in `DEFLECT_VISUAL` (deflection.ts).
 - In dev builds `window.aero` is the scene. `aero.advance(seconds)` steps the
   simulation without animation frames, which helps when the tab is throttled.
 

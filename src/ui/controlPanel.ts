@@ -66,6 +66,7 @@ interface View {
   temperature: number;
   rho: number;
   views: Record<CameraView, () => void>;
+  reset: () => void;
 }
 
 export class ControlPanel {
@@ -78,6 +79,7 @@ export class ControlPanel {
     private readonly container: HTMLElement,
     private readonly store: Store<AppState>,
     private readonly onView: (view: CameraView) => void,
+    private readonly onReset: () => void,
   ) {}
 
   get element(): HTMLElement | null {
@@ -101,7 +103,7 @@ export class ControlPanel {
     for (const c of Object.values(this.ctrl)) c?.updateDisplay();
   }
 
-  private viewFor(state: AppState, ev: Evaluation): Omit<View, 'views'> {
+  private viewFor(state: AppState, ev: Evaluation): Omit<View, 'views' | 'reset'> {
     const u = state.units;
     const c = state.config;
     return {
@@ -152,6 +154,7 @@ export class ControlPanel {
       views: Object.fromEntries(
         (Object.keys(CAMERA_VIEWS) as CameraView[]).map((v) => [v, () => this.onView(v)]),
       ) as Record<CameraView, () => void>,
+      reset: () => this.onReset(),
     };
     const v = this.view;
     const gui = new GUI({ container: this.container, title: 'Setup', width: 300 });
@@ -262,6 +265,8 @@ export class ControlPanel {
     for (const key of Object.keys(CAMERA_VIEWS) as CameraView[]) {
       units.add(v.views, key).name(`Camera: ${CAMERA_VIEWS[key].label}`);
     }
+
+    units.add(v, 'reset').name('Reset everything to defaults');
 
     // Everything the user tunes often stays open; the rest starts folded.
     env.close();

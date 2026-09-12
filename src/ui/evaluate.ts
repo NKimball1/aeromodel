@@ -31,8 +31,9 @@ export function resolveRho(state: AppState): number {
   return state.rhoSource === 'altitude' ? airDensity(state.altitudeM, state.temperatureC) : state.rhoManual;
 }
 
-export function evaluate(state: AppState, setup: Setup = currentSetup(state)): Evaluation {
-  const base: Omit<Environment, 'speedMs'> = {
+/** Ride conditions for a setup, minus the speed (which depends on hold mode). */
+export function rideConditions(state: AppState, setup: Setup = currentSetup(state)): Omit<Environment, 'speedMs'> {
+  return {
     rho: resolveRho(state),
     riderMassKg: state.riderMassKg,
     bikeMassKg: setup.bikeMassKg,
@@ -40,6 +41,10 @@ export function evaluate(state: AppState, setup: Setup = currentSetup(state)): E
     grade: state.gradePct / 100,
     drivetrainLoss: state.drivetrainLossPct / 100,
   };
+}
+
+export function evaluate(state: AppState, setup: Setup = currentSetup(state)): Evaluation {
+  const base = rideConditions(state, setup);
   const coeffs = coefficientsFor(setup.config);
   const speedMs = state.hold === 'power' ? speedFromPower(state.targetPowerW, base, coeffs) : state.speedMs;
   const env = { ...base, speedMs };

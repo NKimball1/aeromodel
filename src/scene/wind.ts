@@ -8,10 +8,12 @@ import {
 } from 'three';
 import { PALETTE } from './materials';
 import { SPEED_VISUAL } from './speedVisuals';
+import { deflect, type Capsule, type Deflected } from './deflection';
 import { wakeStrength, type WakeShape } from './wake';
 
 const FREE_COLOR = new Color(PALETTE.wind);
 const WAKE_COLOR = new Color(PALETTE.wake);
+const scratch: Deflected = { x: 0, y: 0, z: 0, amount: 0 };
 
 /**
  * Visual tuning for the airflow. Illustrative only: nothing here is physics.
@@ -39,6 +41,8 @@ export const WIND_VISUAL = {
  * Air particles flowing +X → −X as short fading streaks. Streaks that pass
  * through the wake slow down (velocity deficit), swirl (turbulence) and shift
  * colour toward the wake colour, so the wake is visible in the flow itself.
+ * Both ends of every streak are pushed around the rider's body capsules, so
+ * streaks bend around the rider instead of passing through.
  */
 export class WindField {
   readonly object: LineSegments;
@@ -78,8 +82,9 @@ export class WindField {
   /**
    * @param airSpeedMs apparent wind along −X; negative means air moving +X (tailwind faster than rider).
    * @param wake current wake shape, or null for undisturbed flow.
+   * @param colliders body capsules to deflect around; empty for no deflection.
    */
-  update(dt: number, airSpeedMs: number, wake: WakeShape | null): void {
+  update(dt: number, airSpeedMs: number, wake: WakeShape | null, colliders: readonly Capsule[] = []): void {
     const { cfg, heads, jitter, phase, positions, colors } = this;
     const n = cfg.count;
     const flow = -airSpeedMs * SPEED_VISUAL.timeScale;
@@ -98,6 +103,8 @@ export class WindField {
     const amplitude = cfg.swirlAmplitude * chaos;
     const t = this.time;
     const tTail = t - trailSeconds * speedRatio;
+    // Long fast streaks overlap into a curtain; thin them out as they lengthen.
+    const densityFade = 1 / Math.sqrt(Math.max(1, trailFactor));
 
     for (let i = 0; i < n; i++) {
       const i3 = i * 3;
@@ -130,17 +137,31 @@ export class WindField {
       const aTail = amplitude * sTail;
 
       const i6 = i * 6;
-      positions[i6] = x;
-      positions[i6 + 1] = y0 + aHead * Math.sin(omega * t + p1 + x * 3.1);
-      positions[i6 + 2] = z0 + aHead * Math.cos(omega * 0.83 * t + p2 + x * 2.3);
-      positions[i6 + 3] = tailX;
-      positions[i6 + 4] = y0 + aTail * Math.sin(omega * tTail + p1 + tailX * 3.1);
-      positions[i6 + 5] = z0 + aTail * Math.cos(omega * 0.83 * tTail + p2 + tailX * 2.3);
+      deflect(
+        colliders,
+        x,
+        y0 + aHead * Math.sin(omega * t + p1 + x * 3.1),
+        z0 + aHead * Math.cos(omega * 0.83 * t + p2 + x * 2.3),
+        scratch,
+      );
+      positions[i6] = scratch.x;
+      positions[i6 + 1] = scratch.y;
+      positions[i6 + 2] = scratch.z;
+      deflect(
+        colliders,
+        tailX,
+        y0 + aTail * Math.sin(omega * tTail + p1 + tailX * 3.1),
+        z0 + aTail * Math.cos(omega * 0.83 * tTail + p2 + tailX * 2.3),
+        scratch,
+      );
+      positions[i6 + 3] = scratch.x;
+      positions[i6 + 4] = scratch.y;
+      positions[i6 + 5] = scratch.z;
 
       // Colour and opacity shift toward the wake colour with local strength and overall drag.
       const fade = Math.min(1, (x - cfg.xMin) / cfg.edgeFade, (cfg.xMax - x) / cfg.edgeFade);
       const tint = Math.min(1, s * (0.45 + 0.55 * level) * 1.4);
-      const alpha = Math.min(1, cfg.headAlpha * Math.max(0, fade) * (1 + cfg.wakeAlphaBoost * s * level));
+      const alpha = Math.min(1, cfg.headAlpha * densityFade * Math.max(0, fade) * (1 + cfg.wakeAlphaBoost * s * level));
       const r = FREE_COLOR.r + (WAKE_COLOR.r - FREE_COLOR.r) * tint;
       const g = FREE_COLOR.g + (WAKE_COLOR.g - FREE_COLOR.g) * tint;
       const b = FREE_COLOR.b + (WAKE_COLOR.b - FREE_COLOR.b) * tint;

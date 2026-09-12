@@ -343,6 +343,144 @@ body,
   white-space: nowrap;
 }
 
+/* --- Power vs speed chart ------------------------------------------------ */
+.chart {
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+}
+
+.chart-legend {
+  display: flex;
+  gap: 12px;
+  margin: -2px 0 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.chart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.line-key {
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  flex: none;
+}
+
+.chart-plot {
+  position: relative;
+  width: 100%;
+  touch-action: none;
+}
+
+.chart-plot svg {
+  display: block;
+  overflow: visible;
+}
+
+.chart-plot .grid {
+  stroke: var(--hairline);
+  stroke-width: 1;
+}
+
+.chart-plot .axis-base {
+  stroke: #c3c2b7;
+  stroke-width: 1;
+}
+
+.chart-plot .tick,
+.chart-plot .axis-title {
+  fill: var(--text-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-plot .series {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* 2px surface ring keeps markers legible where they sit on a line. */
+.chart-plot .marker {
+  stroke: var(--surface-1);
+  stroke-width: 2;
+}
+
+.chart-plot .crosshair {
+  stroke: #c3c2b7;
+  stroke-width: 1;
+}
+
+.chart-tooltip {
+  position: absolute;
+  top: 6px;
+  padding: 6px 8px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--panel-shadow);
+  pointer-events: none;
+  font-size: 12px;
+  display: grid;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.chart-tooltip[hidden] {
+  display: none;
+}
+
+.chart-tooltip-title {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-tooltip-row span:last-child,
+.chart-tooltip-diff {
+  color: var(--text-secondary);
+}
+
+.chart-table {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.chart-table summary {
+  cursor: pointer;
+}
+
+.chart-table table {
+  margin-top: 6px;
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-table th,
+.chart-table td {
+  text-align: right;
+  padding: 2px 4px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.chart-table th:first-child,
+.chart-table td:first-child {
+  text-align: left;
+}
+
 /* Narrow screens: readout docks along the bottom, two columns. */
 @media (max-width: 1000px) {
   .readout {
@@ -352,7 +490,7 @@ body,
     right: 12px;
     bottom: 12px;
     width: auto;
-    max-height: 45%;
+    max-height: 50%;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: start;
   }
@@ -370,9 +508,16 @@ body,
     grid-column: 1;
   }
 
+  .readout .chart {
+    grid-column: 2;
+    grid-row: 3 / span 2;
+    padding-left: 16px;
+    border-left: 1px solid var(--hairline);
+  }
+
   .readout .baseline {
     grid-column: 2;
-    grid-row: 1 / span 3;
+    grid-row: 1 / span 2;
     border-top: none;
     padding-top: 0;
     padding-left: 16px;
@@ -380,6 +525,6 @@ body,
   }
 
   .panel-controls {
-    max-height: calc(55% - 36px);
+    max-height: calc(50% - 36px);
   }
 }

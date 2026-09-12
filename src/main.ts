@@ -4,12 +4,14 @@ import { currentSetup, initialAppState, type AppState } from './ui/appState';
 import { compare } from './ui/baseline';
 import { ControlPanel } from './ui/controlPanel';
 import { evaluate } from './ui/evaluate';
+import { loadState, saveState } from './ui/persist';
 import { Readout } from './ui/readout';
 import { sceneStateFor } from './ui/sceneMapping';
 import { Store } from './ui/store';
 
 const app = document.getElementById('app')!;
-const store = new Store<AppState>(initialAppState);
+// Restore the last setup and baseline from this browser, if any.
+const store = new Store<AppState>(loadState());
 
 const firstEval = evaluate(store.get());
 const scene = new AeroScene(app, sceneStateFor(store.get().config, firstEval.env));
@@ -17,7 +19,12 @@ const scene = new AeroScene(app, sceneStateFor(store.get().config, firstEval.env
 const controlsHost = document.createElement('div');
 controlsHost.className = 'panel-controls';
 app.appendChild(controlsHost);
-const panel = new ControlPanel(controlsHost, store, (view) => scene.setView(view));
+const panel = new ControlPanel(
+  controlsHost,
+  store,
+  (view) => scene.setView(view),
+  () => store.update(() => ({ ...initialAppState, config: { ...initialAppState.config } })),
+);
 
 const readout = new Readout(app, {
   onPin: () => store.update((s) => ({ ...s, baseline: currentSetup(s) })),
@@ -32,6 +39,12 @@ function render(state: AppState): void {
 }
 
 store.subscribe(render);
+
+let saveTimer = 0;
+store.subscribe((state) => {
+  window.clearTimeout(saveTimer);
+  saveTimer = window.setTimeout(() => saveState(state), 300);
+});
 render(store.get());
 
 // Keep the rider centred in the space the panels leave free.
