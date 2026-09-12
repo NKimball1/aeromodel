@@ -40,6 +40,8 @@ src/
     wheel.ts         lathe rims by depth, disc, tire by width, rotors, spoke blur at speed
     wind.ts          streak particles +X to -X; slow, swirl and tint inside the wake
     deflection.ts    body capsules from the skeleton; pushes streaks around the rider; pure, tested
+    hotspots.ts      per-component turbulence plumes (helmet, kit, frame, wheels, tires); pure, tested
+    hotspotSmoke.ts  smoke shed from each component, sized by how draggy that option is
     wake.ts          CdA -> wake shape (length, width, deficit, chaos, opacity); pure, tested
     wakeSmoke.ts     soft smoke puffs shed from the rider's back (custom point shader)
     environment.ts   tunnel, rolling tarmac road (procedural texture), lights, speed arrow
@@ -57,6 +59,7 @@ src/
     powerChart.ts    hand-built SVG chart with hover crosshair, tooltip and table view
     persist.ts       remembers setup + baseline in localStorage, validated on load; tested
     sceneMapping.ts  physics output to SceneState (cadence from power, airspeed)
+    hotspots.ts      ranks each component's option within its class for the plumes; tested
     labels.ts        display names for presets
 scripts/
   reference-table.test.ts   prints a watts-by-position table for eyeballing
@@ -64,13 +67,14 @@ scripts/
 
 ## Commands
 
-Use pnpm (via corepack).
+Requires Node 20+ and [pnpm](https://pnpm.io) (`corepack enable` provides it).
 
 ```bash
-corepack pnpm@latest install
-corepack pnpm@latest test        # unit tests
-corepack pnpm@latest ref         # print the reference table
-corepack pnpm@latest dev         # dev server at http://localhost:5173
+pnpm install
+pnpm dev         # dev server at http://localhost:5173
+pnpm test        # unit tests
+pnpm ref         # print a watts-by-position reference table
+pnpm build       # type-check + production build into dist/
 ```
 
 ## Physics model
@@ -137,6 +141,12 @@ the composition.
   velocity deficit, turbulence and smoke opacity all scale with it, deliberately
   exaggerated. Its height comes from the rider's pose, so a tuck also lowers it. Tuning
   lives in `WAKE_VISUAL` (wake.ts), `WIND_VISUAL` (wind.ts) and `SMOKE_VISUAL` (wakeSmoke.ts).
+- Every aero choice has its own visible plume, not just the overall wake. A road helmet
+  sheds a churning plume off the head and an aero helmet leaves clean air; box wheels
+  churn while deep rims and a disc run clean; the same for clothing, frame and tire width.
+  A component's plume level is where its option ranks within that component's options
+  (best = clean, worst = full plume), taken from the physics constants, so tuning a CdA
+  delta moves the visual too. Tuning lives in `HOTSPOT_VISUAL` and `HOTSPOT_SMOKE_VISUAL`.
 - Deflection is deliberately coarse: torso, head, arms and legs are capsules rebuilt from
   the skeleton each frame, and each streak end near one is pushed outward with a smooth
   falloff. No flow solving. Tuning lives in `DEFLECT_VISUAL` (deflection.ts).

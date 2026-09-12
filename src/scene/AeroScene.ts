@@ -10,6 +10,9 @@ import { SPEED_VISUAL } from './speedVisuals';
 import { bodyExtent, dragLevel, wakeShape, type WakeShape } from './wake';
 import { WakeSmoke } from './wakeSmoke';
 import { riderColliders } from './deflection';
+import { FRAME_STYLES, frameLayout } from './bikeTypes';
+import { CLEAN_HOTSPOTS, HOTSPOT_KEYS, hotspotEmitters, type HotspotLevels } from './hotspots';
+import { HotspotSmoke } from './hotspotSmoke';
 import { WindField } from './wind';
 
 /**
@@ -31,6 +34,8 @@ export interface SceneState {
   cadenceRpm: number;
   /** Total CdA, m²: drives the size and turbulence of the wake. */
   cda: number;
+  /** 0..1 per component: how dirty that part's own plume is (0 = best option in its class). */
+  hotspots: HotspotLevels;
 }
 
 /** Seconds-ish time constant for easing between pose presets. */
@@ -48,11 +53,13 @@ export class AeroScene {
   private readonly rider = new RiderModel();
   private readonly wind = new WindField();
   private readonly smoke = new WakeSmoke();
+  private readonly hotspotSmoke = new HotspotSmoke();
   private readonly resizeObserver: ResizeObserver;
 
   private state: SceneState;
   private pose: PoseParams;
   private wakeLevel: number;
+  private hotspotLevels: HotspotLevels = { ...CLEAN_HOTSPOTS };
   /** Latest wake, exposed for debugging from the console. */
   wake: WakeShape | null = null;
   private crankAngle = 0;
@@ -64,6 +71,7 @@ export class AeroScene {
     this.state = initial;
     this.pose = { ...POSE_PRESETS[initial.position] };
     this.wakeLevel = dragLevel(initial.cda);
+    this.hotspotLevels = { ...initial.hotspots };
 
     this.renderer = new WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -75,7 +83,7 @@ export class AeroScene {
     this.env = new TunnelEnvironment(this.scene, this.renderer.capabilities.getMaxAnisotropy());
 
     this.bikeRoot.add(this.bike.group, this.rider.group);
-    this.scene.add(this.bikeRoot, this.wind.object, this.smoke.object);
+    this.scene.add(this.bikeRoot, this.wind.object, this.smoke.object, this.hotspotSmoke.object);
 
     this.applyEquipment();
 
@@ -157,8 +165,14 @@ export class AeroScene {
     this.wakeLevel += (dragLevel(s.cda) - this.wakeLevel) * (1 - Math.exp(-dt * WAKE_EASE_RATE));
     const wake = wakeShape(this.wakeLevel, bodyExtent(skeleton, HEAD_RADIUS), s.airSpeedMs);
     this.wake = wake;
-    this.wind.update(dt, s.airSpeedMs, wake, riderColliders(skeleton, HEAD_RADIUS));
+    const hotspotEase = 1 - Math.exp(-dt * WAKE_EASE_RATE * 1.5);
+    for (const key of HOTSPOT_KEYS) {
+      this.hotspotLevels[key] += (s.hotspots[key] - this.hotspotLevels[key]) * hotspotEase;
+    }
+    const emitters = hotspotEmitters(this.hotspotLevels, skeleton, frameLayout(FRAME_STYLES[s.bikeType]));
+    this.wind.update(dt, s.airSpeedMs, wake, riderColliders(skeleton, HEAD_RADIUS), emitters);
     this.smoke.update(dt, s.airSpeedMs, wake);
+    this.hotspotSmoke.update(dt, s.airSpeedMs, emitters, wake.presence);
     this.rig.update(dt);
     this.renderer.render(this.scene, this.rig.camera);
   }
@@ -168,6 +182,7 @@ export class AeroScene {
     if (w === 0 || h === 0) return;
     this.renderer.setSize(w, h);
     this.smoke.setScale(h * this.renderer.getPixelRatio(), this.rig.camera.fov);
+    this.hotspotSmoke.setScale(h * this.renderer.getPixelRatio(), this.rig.camera.fov);
     const { left, right, bottom } = this.insets;
     this.rig.setAspect(w / h, Math.max(1, w - left - right) / Math.max(1, h - bottom));
     this.rig.camera.setViewOffset(w, h, -(left - right) / 2, bottom / 2, w, h);

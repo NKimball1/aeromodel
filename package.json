@@ -1,7 +1,8 @@
 {
-  "name": "aero-viz",
+  "name": "aeromodel",
   "private": true,
   "version": "0.1.0",
+  "description": "Interactive 3D cycling aerodynamics: see how position, kit and equipment change watts, speed and the wake.",
   "type": "module",
   "scripts": {
     "dev": "vite",

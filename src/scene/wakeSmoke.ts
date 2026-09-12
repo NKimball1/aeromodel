@@ -50,6 +50,23 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
+/** Soft round sprites with per-point size (metres) and alpha. Shared by all smoke. */
+export function createSmokeMaterial(): ShaderMaterial {
+  return new ShaderMaterial({
+    uniforms: { uColor: { value: new Color(PALETTE.wake) }, uScale: { value: 400 } },
+    vertexShader,
+    fragmentShader,
+    transparent: true,
+    depthWrite: false,
+    blending: NormalBlending,
+  });
+}
+
+/** Pixels per metre at unit depth: drawing-buffer height / (2·tan(fov/2)). */
+export function smokeScale(drawingBufferHeight: number, fovDeg: number): number {
+  return drawingBufferHeight / (2 * Math.tan((fovDeg * Math.PI) / 360));
+}
+
 /**
  * Soft smoke puffs shed from the rider's back. They drift downstream at the
  * wake's reduced speed, swirl around the wake axis, grow and fade out by the
@@ -87,22 +104,14 @@ export class WakeSmoke {
     this.geometry.setAttribute('aSize', new BufferAttribute(this.sizes, 1).setUsage(DynamicDrawUsage));
     this.geometry.setAttribute('aAlpha', new BufferAttribute(this.alphas, 1).setUsage(DynamicDrawUsage));
 
-    this.material = new ShaderMaterial({
-      uniforms: { uColor: { value: new Color(PALETTE.wake) }, uScale: { value: 400 } },
-      vertexShader,
-      fragmentShader,
-      transparent: true,
-      depthWrite: false,
-      blending: NormalBlending,
-    });
+    this.material = createSmokeMaterial();
     this.object = new Points(this.geometry, this.material);
     this.object.frustumCulled = false;
     this.object.renderOrder = 2;
   }
 
-  /** Pixels per metre at unit depth: drawing-buffer height / (2·tan(fov/2)). */
   setScale(drawingBufferHeight: number, fovDeg: number): void {
-    this.material.uniforms.uScale!.value = drawingBufferHeight / (2 * Math.tan((fovDeg * Math.PI) / 360));
+    this.material.uniforms.uScale!.value = smokeScale(drawingBufferHeight, fovDeg);
   }
 
   update(dt: number, airSpeedMs: number, wake: WakeShape): void {

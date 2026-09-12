@@ -4,6 +4,7 @@
  */
 import { computeCdA, powerFromSpeed, type Environment, type RiderConfig } from '../physics';
 import type { SceneState } from '../scene';
+import { hotspotLevels } from './hotspots';
 
 /** Cadence range the animation uses; loosely tied to power, not physiology. */
 export const CADENCE = {
@@ -35,5 +36,6 @@ export function sceneStateFor(config: RiderConfig, env: Environment): SceneState
     airSpeedMs: env.speedMs + env.headwindMs,
     cadenceRpm: cadenceFromPower(power),
     cda: computeCdA(config),
+    hotspots: hotspotLevels(config),
   };
 }
