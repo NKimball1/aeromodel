@@ -1,0 +1,88 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: #1f2328;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #dde1e6;
+}
+
+#app {
+  position: relative;
+}
+
+#app canvas {
+  display: block;
+}
+
+.dev-bar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  width: 250px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  font-size: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.dev-bar-title {
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5b636d;
+  margin-bottom: 2px;
+}
+
+.dev-bar label {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.dev-bar select,
+.dev-bar button {
+  font: inherit;
+  padding: 3px 4px;
+}
+
+.dev-bar-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dev-bar-range input {
+  flex: 1;
+  min-width: 0;
+}
+
+.dev-bar-range output {
+  width: 52px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.dev-bar-views {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.dev-bar-views button {
+  flex: 1;
+  cursor: pointer;
+}

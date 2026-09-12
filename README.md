@@ -11,8 +11,8 @@ Vite + TypeScript + Three.js. No backend.
 
 | Checkpoint | State |
 | --- | --- |
-| 1. Physics module + constants + tests | **done, awaiting validation against real rides** |
-| 2. Primitive rider, pose presets, pedaling, basic particle flow | not started |
+| 1. Physics module + constants + tests | done |
+| 2. Primitive rider, pose presets, pedaling, basic particle flow | done (temporary dev controls) |
 | 3. Controls wired to readout + baseline delta | not started |
 | 4. Wake responding to CdA | not started |
 | 5. Particle deflection, chart, polish | not started |
@@ -30,8 +30,20 @@ src/
     units.ts      km/h, mph, lb conversions
     defaults.ts   default rider config + environment
     __tests__/    sanity points, monotonicity, inversion, real-ride validation
-  scene/          (checkpoint 2) Three.js rider, wind particles, camera
-  ui/             (checkpoint 3) controls, readouts
+  scene/          Three.js lives here and only here
+    bikeGeometry.ts  bike + body dimensions, grip targets (pure data)
+    pose.ts          pose params, presets, 2-bone IK skeleton solver (pure, tested)
+    rider.ts         mannequin from capsules; kit inflate + fabric flutter shader; helmets
+    bike.ts          frame, cockpit, cranks, aerobars that follow the elbows
+    wheel.ts         lathe-profile rims by depth, disc, tire torus by width, spokes
+    wind.ts          streak particles flowing +X to -X, speed from airspeed
+    environment.ts   tunnel floor, grid, lights, speed arrow
+    cameraRig.ts     orbit camera + side / 3/4 front / rear-wake presets
+    AeroScene.ts     render loop; takes a SceneState, never calls physics
+  ui/
+    sceneMapping.ts  physics output to SceneState (cadence from power, airspeed)
+    devBar.ts        TEMPORARY checkpoint-2 controls, replaced in checkpoint 3
+    labels.ts        display names for presets
 scripts/
   reference-table.test.ts   prints a watts-by-position table for eyeballing
 ```
@@ -44,7 +56,7 @@ Use pnpm (via corepack).
 corepack pnpm@latest install
 corepack pnpm@latest test        # unit tests
 corepack pnpm@latest ref         # print the reference table
-corepack pnpm@latest dev         # dev server (nothing to see until checkpoint 2)
+corepack pnpm@latest dev         # dev server at http://localhost:5173
 ```
 
 ## Physics model
@@ -75,7 +87,17 @@ delta from that baseline, so each modifier table has a 0 entry. Wheels are
 per-wheel objects so a yaw-dependent curve can be added later without touching
 the composition.
 
-### Validating against real rides
+## Scene notes
+
+- Coordinates: +X forward into the wind, +Y up, +Z rider's right. Air flows +X to -X.
+- A position preset is a set of numbers in `POSE_PRESETS` (torso angle, elbow bend,
+  neck angle, head drop, head pitch, hip forward, grip target). Switching presets
+  eases between the numbers. The pose tests check that hands land on the bar,
+  bones keep their length, and knee angles stay realistic, so retune there.
+- In dev builds `window.aero` is the scene. `aero.advance(seconds)` steps the
+  simulation without animation frames, which helps when the tab is throttled.
+
+## Validating against real rides
 
 Add rows to `RIDES` in `src/physics/__tests__/realRides.test.ts` (power,
 speed, mass, grade, wind, altitude, temperature, config) and run the tests.
