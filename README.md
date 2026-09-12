@@ -14,7 +14,7 @@ Vite + TypeScript + Three.js. No backend.
 | 1. Physics module + constants + tests | done |
 | 2. Primitive rider, pose presets, pedaling, basic particle flow | done |
 | 3. Controls wired to readout + baseline delta | done |
-| 4. Wake responding to CdA | not started |
+| 4. Wake responding to CdA | done, awaiting review |
 | 5. Particle deflection, chart, polish | not started |
 
 ## Layout
@@ -38,7 +38,9 @@ src/
     rider.ts         mannequin from capsules; kit inflate + fabric flutter shader; helmets
     bike.ts          frame per type (Kammtail/oval/round tubes), cockpit, disc brakes, drivetrain, aerobars
     wheel.ts         lathe rims by depth, disc, tire by width, rotors, spoke blur at speed
-    wind.ts          streak particles flowing +X to -X, speed from airspeed
+    wind.ts          streak particles +X to -X; slow, swirl and tint inside the wake
+    wake.ts          CdA -> wake shape (length, width, deficit, chaos, opacity); pure, tested
+    wakeSmoke.ts     soft smoke puffs shed from the rider's back (custom point shader)
     environment.ts   tunnel, rolling tarmac road (procedural texture), lights, speed arrow
     cameraRig.ts     orbit camera + side / 3/4 front / rear-wake presets
     AeroScene.ts     render loop; takes a SceneState, never calls physics
@@ -121,6 +123,11 @@ the composition.
 - Speed is deliberately exaggerated. Road scroll, wheel spin and air particles all run at
   `SPEED_VISUAL.timeScale` (1.6x real) so they agree with each other, and air streak
   length grows with airspeed squared. Cadence stays real.
+- The wake is driven by total CdA, mapped to a 0..1 level across the model's range
+  (full TT setup about 0.18 m², upright in a baggy jacket about 0.48 m²). Length, width,
+  velocity deficit, turbulence and smoke opacity all scale with it, deliberately
+  exaggerated. Its height comes from the rider's pose, so a tuck also lowers it. Tuning
+  lives in `WAKE_VISUAL` (wake.ts), `WIND_VISUAL` (wind.ts) and `SMOKE_VISUAL` (wakeSmoke.ts).
 - In dev builds `window.aero` is the scene. `aero.advance(seconds)` steps the
   simulation without animation frames, which helps when the tab is throttled.
 

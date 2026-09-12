@@ -40,10 +40,12 @@ const insets = new ResizeObserver(() => {
   const c = controlsHost.getBoundingClientRect();
   const r = readout.element.getBoundingClientRect();
   const docked = getComputedStyle(readout.element).getPropertyValue('--docked').trim() === '1';
+  // A hidden or collapsed panel (zero size) covers nothing.
+  const readoutShown = r.width > 0 && r.height > 0;
   scene.setInsets({
-    left: c.width > 0 ? c.right - appBox.left : 0,
-    right: docked ? 0 : appBox.right - r.left,
-    bottom: docked ? appBox.bottom - r.top : 0,
+    left: c.width > 0 && c.height > 0 ? c.right - appBox.left : 0,
+    right: readoutShown && !docked ? appBox.right - r.left : 0,
+    bottom: readoutShown && docked ? appBox.bottom - r.top : 0,
   });
 });
 insets.observe(controlsHost);

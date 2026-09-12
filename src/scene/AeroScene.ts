@@ -1,12 +1,14 @@
 import { Group, PCFSoftShadowMap, Scene, WebGLRenderer } from 'three';
 import type { BikeType, FrontWheelDepth, Helmet, Kit, Position, TireWidth, WheelDepth } from '../physics';
-import { REFERENCE_TIRE_WIDTH_M } from './bikeGeometry';
+import { HEAD_RADIUS, REFERENCE_TIRE_WIDTH_M } from './bikeGeometry';
 import { BikeModel } from './bike';
 import { CameraRig, type CameraView } from './cameraRig';
 import { TunnelEnvironment } from './environment';
 import { POSE_PRESETS, lerpPose, solveSkeleton, type PoseParams } from './pose';
 import { RiderModel } from './rider';
 import { SPEED_VISUAL } from './speedVisuals';
+import { bodyExtent, dragLevel, wakeShape, type WakeShape } from './wake';
+import { WakeSmoke } from './wakeSmoke';
 import { WindField } from './wind';
 
 /**
@@ -26,10 +28,14 @@ export interface SceneState {
   /** Speed of the air past the rider (ground speed + headwind): drives particles and kit flutter. */
   airSpeedMs: number;
   cadenceRpm: number;
+  /** Total CdA, m²: drives the size and turbulence of the wake. */
+  cda: number;
 }
 
 /** Seconds-ish time constant for easing between pose presets. */
 const POSE_EASE_RATE = 5;
+/** The wake eases a little slower than the pose so the change reads as the air responding. */
+const WAKE_EASE_RATE = 3;
 
 export class AeroScene {
   private readonly renderer: WebGLRenderer;
@@ -40,10 +46,14 @@ export class AeroScene {
   private readonly bike = new BikeModel();
   private readonly rider = new RiderModel();
   private readonly wind = new WindField();
+  private readonly smoke = new WakeSmoke();
   private readonly resizeObserver: ResizeObserver;
 
   private state: SceneState;
   private pose: PoseParams;
+  private wakeLevel: number;
+  /** Latest wake, exposed for debugging from the console. */
+  wake: WakeShape | null = null;
   private crankAngle = 0;
   private frameHandle = 0;
   private lastFrameMs = 0;
@@ -52,6 +62,7 @@ export class AeroScene {
   constructor(private readonly container: HTMLElement, initial: SceneState) {
     this.state = initial;
     this.pose = { ...POSE_PRESETS[initial.position] };
+    this.wakeLevel = dragLevel(initial.cda);
 
     this.renderer = new WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -63,7 +74,7 @@ export class AeroScene {
     this.env = new TunnelEnvironment(this.scene, this.renderer.capabilities.getMaxAnisotropy());
 
     this.bikeRoot.add(this.bike.group, this.rider.group);
-    this.scene.add(this.bikeRoot, this.wind.object);
+    this.scene.add(this.bikeRoot, this.wind.object, this.smoke.object);
 
     this.applyEquipment();
 
@@ -142,7 +153,11 @@ export class AeroScene {
     this.rider.update(skeleton, dt, s.airSpeedMs);
     this.bike.update(dt, displayedGround, skeleton, this.pose.aerobars);
     this.env.update(dt, displayedGround);
-    this.wind.update(dt, s.airSpeedMs);
+    this.wakeLevel += (dragLevel(s.cda) - this.wakeLevel) * (1 - Math.exp(-dt * WAKE_EASE_RATE));
+    const wake = wakeShape(this.wakeLevel, bodyExtent(skeleton, HEAD_RADIUS), s.airSpeedMs);
+    this.wake = wake;
+    this.wind.update(dt, s.airSpeedMs, wake);
+    this.smoke.update(dt, s.airSpeedMs, wake);
     this.rig.update(dt);
     this.renderer.render(this.scene, this.rig.camera);
   }
@@ -151,6 +166,7 @@ export class AeroScene {
     const { clientWidth: w, clientHeight: h } = this.container;
     if (w === 0 || h === 0) return;
     this.renderer.setSize(w, h);
+    this.smoke.setScale(h * this.renderer.getPixelRatio(), this.rig.camera.fov);
     const { left, right, bottom } = this.insets;
     this.rig.setAspect(w / h, Math.max(1, w - left - right) / Math.max(1, h - bottom));
     this.rig.camera.setViewOffset(w, h, -(left - right) / 2, bottom / 2, w, h);

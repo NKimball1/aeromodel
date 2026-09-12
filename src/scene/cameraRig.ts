@@ -6,7 +6,7 @@ export type CameraView = 'side' | 'threeQuarter' | 'rearWake';
 export const CAMERA_VIEWS: Record<CameraView, { label: string; position: Vector3; target: Vector3 }> = {
   side: { label: 'Side', position: new Vector3(0.1, 1.05, 4.3), target: new Vector3(0.05, 0.85, 0) },
   threeQuarter: { label: '¾ front', position: new Vector3(3.0, 1.55, 2.9), target: new Vector3(0.05, 0.85, 0) },
-  rearWake: { label: 'Rear / wake', position: new Vector3(-4.6, 1.9, 2.1), target: new Vector3(-0.7, 0.85, 0) },
+  rearWake: { label: 'Rear / wake', position: new Vector3(-3.3, 2.3, 4.4), target: new Vector3(-1.0, 0.8, 0) },
 };
 
 const TRANSITION_SECONDS = 0.8;

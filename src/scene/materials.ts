@@ -22,6 +22,8 @@ export const PALETTE = {
   decal: 0xe8e8e8,
   pad: 0x3c4048,
   wind: 0x2c64a8,
+  /** Wake smoke and slowed, turbulent air. Warm raspberry: reads as 'lost energy' and stays clear of the readout's series colours. */
+  wake: 0xc23b6e,
   arrow: 0xd4553f,
 } as const;
 

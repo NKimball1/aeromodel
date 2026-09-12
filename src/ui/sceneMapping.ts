@@ -2,7 +2,7 @@
  * Wires physics output into scene parameters. The only place that knows
  * about both sides.
  */
-import { powerFromSpeed, type Environment, type RiderConfig } from '../physics';
+import { computeCdA, powerFromSpeed, type Environment, type RiderConfig } from '../physics';
 import type { SceneState } from '../scene';
 
 /** Cadence range the animation uses; loosely tied to power, not physiology. */
@@ -34,5 +34,6 @@ export function sceneStateFor(config: RiderConfig, env: Environment): SceneState
     groundSpeedMs: env.speedMs,
     airSpeedMs: env.speedMs + env.headwindMs,
     cadenceRpm: cadenceFromPower(power),
+    cda: computeCdA(config),
   };
 }
