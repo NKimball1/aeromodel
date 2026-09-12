@@ -1,0 +1,236 @@
+/**
+ * ALL physics constants live here. Every value carries a comment giving its
+ * source or reasoning. Values marked ⚠️ are the ones I'm least sure of. Treat
+ * every number here as a default to be tuned against real ride data.
+ *
+ * Convention for CdA composition:
+ *   The POSITION table gives the CdA of a complete rider+bike in that
+ *   position wearing the BASELINE setup: tight road jersey, vented road
+ *   helmet, box-section wheels, 25 mm tires. Every other table is a *delta*
+ *   from that baseline, so the baseline entry in each modifier table is 0.
+ *   Deltas are additive at zero yaw (a simplification; interaction effects
+ *   such as "aero helmet matters more in a TT tuck" are ignored).
+ */
+
+// ---------------------------------------------------------------------------
+// Fundamental / environment
+// ---------------------------------------------------------------------------
+
+/** Standard gravity, m/s². */
+export const G = 9.80665;
+
+/** ISA sea-level air density at 15 °C, kg/m³. */
+export const RHO_DEFAULT = 1.225;
+
+/** ISA sea-level pressure, Pa. Used when deriving rho from altitude. */
+export const P0_SEA_LEVEL = 101325;
+
+/** ISA sea-level temperature, K (15 °C). */
+export const T0_SEA_LEVEL_K = 288.15;
+
+/** ISA tropospheric lapse rate, K/m. */
+export const LAPSE_RATE = 0.0065;
+
+/** Specific gas constant for dry air, J/(kg·K). */
+export const R_DRY_AIR = 287.05;
+
+/** Exponent in the barometric formula: g·M/(R·L) ≈ 5.2559 for the ISA. */
+export const BAROMETRIC_EXPONENT = 5.2559;
+
+// ---------------------------------------------------------------------------
+// Rider / bike defaults
+// ---------------------------------------------------------------------------
+
+/** Spec default. */
+export const RIDER_MASS_DEFAULT_KG = 75;
+
+/** Spec default; a typical road bike with pedals and bottles. */
+export const BIKE_MASS_DEFAULT_KG = 8;
+
+/**
+ * Fraction of crank power lost in the drivetrain. Spec default 3 %.
+ * Literature: a clean, well-lubed chain at moderate power is ~2–3 %;
+ * cross-chained or dirty can exceed 5 %.
+ */
+export const DRIVETRAIN_LOSS_DEFAULT = 0.03;
+
+// ---------------------------------------------------------------------------
+// CdA — position (m²). Full-system values, baseline kit/helmet/wheels.
+// ---------------------------------------------------------------------------
+
+export type Position = 'tt' | 'hoodsForearmsFlat' | 'drops' | 'hoods' | 'upright';
+
+export const POSITIONS: readonly Position[] = ['tt', 'hoodsForearmsFlat', 'drops', 'hoods', 'upright'];
+
+export const POSITION_CDA: Record<Position, number> = {
+  /** Spec range 0.21–0.24; midpoint. Good amateur TT position on aero bars. */
+  tt: 0.225,
+  /**
+   * ⚠️ Not covered by the spec ranges. Forearms flat on the hoods (the now
+   * UCI-banned "puppy paws" / aero-hoods position). Field tests with aero
+   * sensors generally place it between the drops and a TT tuck, roughly
+   * 0.26–0.30. Midpoint 0.28.
+   */
+  hoodsForearmsFlat: 0.28,
+  /** Spec range 0.30–0.32; midpoint. */
+  drops: 0.31,
+  /** Spec range 0.33–0.36; midpoint. */
+  hoods: 0.345,
+  /** Spec says 0.40+; picked 0.42 for a relaxed, sat-up commuter posture. */
+  upright: 0.42,
+};
+
+// ---------------------------------------------------------------------------
+// CdA — kit (m²). Delta from a tight road jersey.
+// ---------------------------------------------------------------------------
+
+export type Kit = 'skinsuit' | 'tightJersey' | 'looseJersey' | 'baggyJacket';
+
+export const KITS: readonly Kit[] = ['skinsuit', 'tightJersey', 'looseJersey', 'baggyJacket'];
+
+export const KIT_CDA_DELTA: Record<Kit, number> = {
+  /**
+   * Skinsuit vs a good, tight jersey: wind-tunnel write-ups usually quote
+   * 0.005–0.02 m² (a few to ~15 W at 40 km/h). Picked 0.012.
+   */
+  skinsuit: -0.012,
+  /** Baseline. */
+  tightJersey: 0,
+  /**
+   * Spec: loose clothing adds ~0.02–0.05. A loose (flapping) jersey sits in
+   * the lower half of that range. Picked 0.03.
+   */
+  looseJersey: 0.03,
+  /** Upper end of the spec's loose-clothing range. */
+  baggyJacket: 0.05,
+};
+
+// ---------------------------------------------------------------------------
+// CdA — helmet (m²). Delta from a vented road helmet.
+// ---------------------------------------------------------------------------
+
+export type Helmet = 'aero' | 'road' | 'none';
+
+export const HELMETS: readonly Helmet[] = ['aero', 'road', 'none'];
+
+export const HELMET_CDA_DELTA: Record<Helmet, number> = {
+  /**
+   * Aero road / short-tail TT helmet vs vented road helmet: commonly quoted
+   * 0.005–0.015 m² (≈5–15 W at 40 km/h). Midpoint 0.01.
+   */
+  aero: -0.01,
+  /** Baseline. */
+  road: 0,
+  /**
+   * ⚠️ Very uncertain and small. Bare head / cap vs vented helmet: tests
+   * disagree on the sign; hair and cap flapping tend to make it slightly
+   * worse. Picked +0.005. Tune or zero this out.
+   */
+  none: 0.005,
+};
+
+// ---------------------------------------------------------------------------
+// CdA — wheels (m²). Per-wheel objects so a yaw-dependent drag curve can be
+// added per wheel later without touching the composition logic in cda.ts.
+// ---------------------------------------------------------------------------
+
+export type WheelDepth = 'box' | 'mid' | 'deep' | 'disc';
+export type FrontWheelDepth = Exclude<WheelDepth, 'disc'>;
+
+export const FRONT_WHEEL_DEPTHS: readonly FrontWheelDepth[] = ['box', 'mid', 'deep'];
+export const REAR_WHEEL_DEPTHS: readonly WheelDepth[] = ['box', 'mid', 'deep', 'disc'];
+
+export interface WheelSpec {
+  /** Human label for the UI. */
+  label: string;
+  /** Approximate rim depth in mm, for rendering. Disc = full radius. */
+  depthMm: number;
+  /** CdA delta from a box-section rim at zero yaw, m². */
+  cdaDeltaZeroYaw: number;
+  // TODO(yaw): add `cdaDeltaByYaw: Array<[yawDeg, delta]>`. Deep rims and
+  // discs earn their real advantage at 5–15° yaw (the "sail effect").
+}
+
+/**
+ * Spec: a deep front + rear pair saves roughly 0.005–0.010 m² vs box rims
+ * at zero yaw. The front wheel sees clean air and matters more; the rear sits
+ * in the wake of the seat tube and the rider's legs so its share is smaller.
+ * Pair sums below: mid+mid 0.005, deep+deep 0.008, deep+disc 0.009.
+ */
+export const FRONT_WHEEL: Record<FrontWheelDepth, WheelSpec> = {
+  box: { label: 'Box (~25 mm)', depthMm: 25, cdaDeltaZeroYaw: 0 },
+  mid: { label: '40–50 mm', depthMm: 45, cdaDeltaZeroYaw: -0.003 },
+  deep: { label: '60–80 mm', depthMm: 70, cdaDeltaZeroYaw: -0.005 },
+};
+
+export const REAR_WHEEL: Record<WheelDepth, WheelSpec> = {
+  box: { label: 'Box (~25 mm)', depthMm: 25, cdaDeltaZeroYaw: 0 },
+  mid: { label: '40–50 mm', depthMm: 45, cdaDeltaZeroYaw: -0.002 },
+  deep: { label: '60–80 mm', depthMm: 70, cdaDeltaZeroYaw: -0.003 },
+  /** ⚠️ Rear disc vs deep rear at zero yaw is a small step; ~0.001 more. */
+  disc: { label: 'Disc', depthMm: 330, cdaDeltaZeroYaw: -0.004 },
+};
+
+// ---------------------------------------------------------------------------
+// Tires. Width affects Crr primarily and CdA only slightly.
+// ---------------------------------------------------------------------------
+
+export type TireWidth = 23 | 25 | 28 | 32;
+
+export const TIRE_WIDTHS: readonly TireWidth[] = [23, 25, 28, 32];
+
+/**
+ * ⚠️ CdA delta from 25 mm, m². Wider tires add frontal area and can spoil
+ * rim aero ("rule of 105"). Wheel-maker tests quote a few watts at 40 km/h
+ * per size step, i.e. ~0.001–0.002 m² per step.
+ */
+export const TIRE_WIDTH_CDA_DELTA: Record<TireWidth, number> = {
+  23: -0.001,
+  25: 0,
+  28: 0.002,
+  32: 0.004,
+};
+
+/**
+ * ⚠️ Crr multiplier relative to 25 mm at sensible pressures on real roads.
+ * Drum tests show wider tires roll slightly better at equal casing and
+ * pressure (shorter, wider contact patch); on rough roads the gap grows
+ * because wider tires run lower pressure and lose less to suspension losses.
+ * The effect is a few percent, so this table is deliberately mild.
+ */
+export const TIRE_WIDTH_CRR_MULTIPLIER: Record<TireWidth, number> = {
+  23: 1.03,
+  25: 1.0,
+  28: 0.98,
+  32: 0.97,
+};
+
+// ---------------------------------------------------------------------------
+// Crr — tire quality presets (dimensionless). Values at 25 mm.
+// ---------------------------------------------------------------------------
+
+export type TireQuality = 'racing' | 'training' | 'gravel';
+
+export const TIRE_QUALITIES: readonly TireQuality[] = ['racing', 'training', 'gravel'];
+
+export const TIRE_QUALITY_CRR: Record<TireQuality, number> = {
+  /** Spec range 0.0030–0.0035 (GP5000 / Corsa Speed class on smooth road). */
+  racing: 0.00325,
+  /** Spec: ~0.0045 (puncture-resistant training tires). */
+  training: 0.0045,
+  /** Spec: ~0.006 (knobby / heavy-casing gravel tires on tarmac). */
+  gravel: 0.006,
+};
+
+// ---------------------------------------------------------------------------
+// Solver
+// ---------------------------------------------------------------------------
+
+/** speedFromPower bisection tolerance, m/s (~0.004 km/h). */
+export const SPEED_SOLVER_TOLERANCE_MS = 1e-3;
+
+/** Hard cap on the solver's search bracket, m/s (≈360 km/h). */
+export const SPEED_SOLVER_MAX_MS = 100;
+
+/** Step used when walking down from the cap to bracket the largest root, m/s. */
+export const SPEED_SOLVER_WALK_STEP_MS = 0.25;
