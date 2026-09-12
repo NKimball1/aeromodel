@@ -481,6 +481,110 @@ body,
   text-align: left;
 }
 
+/* --- Sources window ------------------------------------------------------ */
+.readout-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -6px;
+}
+
+.link-button {
+  font: inherit;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  padding: 2px 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.link-button:hover {
+  color: var(--text-primary);
+}
+
+.sources {
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(70vh, 560px);
+  padding: 14px 16px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.sources::backdrop {
+  background: rgba(20, 22, 26, 0.25);
+}
+
+.sources-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sources-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sources-close {
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.sources-close:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.sources-intro,
+.sources-caveat {
+  margin: 6px 0 10px;
+  color: var(--text-secondary);
+}
+
+.sources-caveat {
+  margin: 10px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--hairline);
+}
+
+.sources-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.sources-link {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.sources-meta {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.sources-used {
+  color: var(--text-secondary);
+}
+
 /* Narrow screens: readout docks along the bottom, two columns. */
 @media (max-width: 1000px) {
   .readout {
@@ -506,6 +610,10 @@ body,
 
   .readout .breakdown {
     grid-column: 1;
+  }
+
+  .readout .readout-footer {
+    grid-column: 1 / -1;
   }
 
   .readout .chart {

@@ -13,6 +13,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  DRIVETRAIN_LOSS_DEFAULT,
   airDensity,
   defaultConfig,
   kmhToMs,
@@ -77,7 +78,7 @@ describe('real rides', () => {
         bikeMassKg: ride.bikeMassKg,
         headwindMs: ride.headwindMs,
         grade: ride.grade,
-        drivetrainLoss: 0.03,
+        drivetrainLoss: DRIVETRAIN_LOSS_DEFAULT,
       };
       const predictedKmh = msToKmh(speedFromPower(ride.avgPowerW, env, ride.config));
       const predictedW = powerFromSpeed({ ...env, speedMs: kmhToMs(ride.avgSpeedKmh) }, ride.config).total;

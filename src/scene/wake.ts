@@ -11,12 +11,11 @@ import type { V3 } from './bikeGeometry';
 
 export const WAKE_VISUAL = {
   /**
-   * CdA mapped to level 0 and 1. Slightly inside the model's range (full TT
-   * setup ~0.18 m², upright baggy on an endurance bike ~0.48 m²) so everyday
-   * setups use more of the visual range.
+   * CdA mapped to level 0 and 1: the model's range, from a full TT setup
+   * (~0.20 m²) to upright in a baggy jacket on an endurance bike (~0.42 m²).
    */
   cdaAtLevel0: 0.2,
-  cdaAtLevel1: 0.46,
+  cdaAtLevel1: 0.42,
   /** Wake length behind the rider's back, metres. */
   length: [1.2, 5.2],
   /** Lateral half-width at the start of the wake, metres. */

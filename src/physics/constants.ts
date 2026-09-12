@@ -48,11 +48,13 @@ export const RIDER_MASS_DEFAULT_KG = 75;
 export const BIKE_MASS_DEFAULT_KG = 8;
 
 /**
- * Fraction of crank power lost in the drivetrain. Spec default 3 %.
- * Literature: a clean, well-lubed chain at moderate power is ~2–3 %;
- * cross-chained or dirty can exceed 5 %.
+ * Fraction of crank power lost in the drivetrain. Retuned from the spec's
+ * 3 % to 2.5 %: Martin et al. 1998 measured 97.7 % efficiency (2.3 % loss)
+ * against a calibrated ergometer; Spicer et al. 2001 report chain-drive
+ * efficiencies in the high 90s. Dirty or cross-chained can exceed 5 %.
+ * See references.ts: martin1998, spicer2001.
  */
-export const DRIVETRAIN_LOSS_DEFAULT = 0.03;
+export const DRIVETRAIN_LOSS_DEFAULT = 0.025;
 
 // ---------------------------------------------------------------------------
 // CdA — position (m²). Full-system values, baseline kit/helmet/wheels.
@@ -62,9 +64,21 @@ export type Position = 'tt' | 'hoodsForearmsFlat' | 'drops' | 'hoods' | 'upright
 
 export const POSITIONS: readonly Position[] = ['tt', 'hoodsForearmsFlat', 'drops', 'hoods', 'upright'];
 
+/**
+ * Checked against the wind-tunnel drag areas compiled in Defraeye et al.
+ * 2010, Table 1 (references.ts: defraeye2010), which the literature tests
+ * enforce. Published values, rider + bike:
+ *   time trial 0.203–0.269 m² (median ~0.244; Martin 1998 amateurs 0.269)
+ *   dropped    0.243–0.32 m²
+ *   upright    0.270–0.358 m² (hands on the tops)
+ */
 export const POSITION_CDA: Record<Position, number> = {
-  /** Spec range 0.21–0.24; midpoint. Good amateur TT position on aero bars. */
-  tt: 0.225,
+  /**
+   * Retuned from 0.225 to 0.24: near the median of published time-trial
+   * values (~0.244). 0.225 sat in the optimistic half; typical amateurs on
+   * clip-ons measure higher.
+   */
+  tt: 0.24,
   /**
    * ⚠️ Not covered by the spec ranges. Forearms flat on the hoods (the now
    * UCI-banned "puppy paws" / aero-hoods position). Field tests with aero
@@ -72,12 +86,20 @@ export const POSITION_CDA: Record<Position, number> = {
    * 0.26–0.30. Midpoint 0.28.
    */
   hoodsForearmsFlat: 0.28,
-  /** Spec range 0.30–0.32; midpoint. */
+  /** Spec range 0.30–0.32; midpoint. Published dropped values 0.243–0.32 agree. */
   drops: 0.31,
-  /** Spec range 0.33–0.36; midpoint. */
-  hoods: 0.345,
-  /** Spec says 0.40+; picked 0.42 for a relaxed, sat-up commuter posture. */
-  upright: 0.42,
+  /**
+   * Spec range 0.33–0.36. No study in the table isolates hands on the hoods;
+   * it must sit between drops and tops. Moved from 0.345 to 0.34 (the spec's
+   * own sanity value) to keep a gap below the retuned upright value.
+   */
+  hoods: 0.34,
+  /**
+   * Retuned from 0.42 to 0.36. The spec's "0.40+" was above every published
+   * wind-tunnel value for sitting up with hands on the tops (0.270–0.358,
+   * Jeukendrup & Martin 2001 via Defraeye 2010 at the top end).
+   */
+  upright: 0.36,
 };
 
 // ---------------------------------------------------------------------------

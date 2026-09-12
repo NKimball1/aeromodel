@@ -23,13 +23,14 @@ Vite + TypeScript + Three.js. No backend.
 src/
   physics/        pure functions, no Three.js, unit-tested
     constants.ts  EVERY tunable number, each with its source/reasoning
+    references.ts published sources, shared by the literature tests and the Sources window
     cda.ts        computeCdA(config, yawDeg)  — yaw accepted, ignored (TODO)
     crr.ts        computeCrr(config)
     power.ts      powerFromSpeed(), speedFromPower()
     airDensity.ts rho from altitude + temperature
     units.ts      km/h, mph, lb conversions
     defaults.ts   default rider config + environment
-    __tests__/    sanity points, monotonicity, inversion, real-ride validation
+    __tests__/    sanity points, monotonicity, inversion, literature + real-ride validation
   scene/          Three.js lives here and only here
     bikeGeometry.ts  rider fit: BB, saddle, bar clamp, body segments, grips (pure data)
     bikeTypes.ts     per-type frame styles + layout solver (pure, clearance-tested)
@@ -58,6 +59,7 @@ src/
     chartModel.ts    power-vs-speed curves, axis ranges, ticks; pure, tested
     powerChart.ts    hand-built SVG chart with hover crosshair, tooltip and table view
     persist.ts       remembers setup + baseline in localStorage, validated on load; tested
+    sourcesDialog.ts small "Sources & validation" window
     sceneMapping.ts  physics output to SceneState (cadence from power, airspeed)
     hotspots.ts      ranks each component's option within its class for the plumes; tested
     labels.ts        display names for presets
@@ -154,6 +156,26 @@ the composition.
   falloff. No flow solving. Tuning lives in `DEFLECT_VISUAL` (deflection.ts).
 - In dev builds `window.aero` is the scene. `aero.advance(seconds)` steps the
   simulation without animation frames, which helps when the tab is throttled.
+
+## Validation against published data
+
+`src/physics/__tests__/literature.test.ts` checks the model against published measurements.
+The sources are listed in `src/physics/references.ts` and in the app under
+"Sources & validation".
+
+- **The equation.** Martin et al. (1998) measured road power with SRM power meters and
+  wind-tunnel drag areas for the same riders. With their inputs, this model predicts their
+  measured power to within 6.4 W RMS (their own model: 6.2 W), and matches their aero,
+  rolling and gravity components bout by bout and their appendix example term by term.
+- **Position CdA.** Checked against the wind-tunnel values compiled in Defraeye et al.
+  (2010), Table 1: time trial 0.203–0.269 m² (median about 0.244), dropped 0.243–0.32,
+  upright on the tops 0.270–0.358. This led to retuning upright from 0.42 to 0.36, time
+  trial from 0.225 to 0.24, and hoods from 0.345 to 0.34.
+- **Rolling resistance.** Racing-tire Crr is checked against drum tests of a
+  Continental GP5000, including how it changes with width.
+- **Drivetrain.** Martin et al. measured 2.3 % loss, so the default moved from 3 % to 2.5 %.
+- **Still estimates.** Helmet, clothing, frame and wheel deltas have no single peer-reviewed
+  benchmark; they stay flagged ⚠️ in `constants.ts`.
 
 ## Validating against real rides
 

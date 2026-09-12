@@ -9,3 +9,4 @@ export { computeCrr } from './crr';
 export { airDensity } from './airDensity';
 export { powerFromSpeed, speedFromPower, coefficientsFor } from './power';
 export type { DragCoefficients } from './power';
+export { REFERENCES, UNVALIDATED_NOTE, referenceById, type Reference, type ReferenceId } from './references';

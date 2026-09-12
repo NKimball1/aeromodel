@@ -41,14 +41,13 @@ describe('computeCdA', () => {
     }
   });
 
-  it('positions sit inside the published ranges', () => {
+  it('positions sit inside the spec ranges (published ranges are in literature.test.ts)', () => {
     expect(POSITION_CDA.tt).toBeGreaterThanOrEqual(0.21);
     expect(POSITION_CDA.tt).toBeLessThanOrEqual(0.24);
     expect(POSITION_CDA.drops).toBeGreaterThanOrEqual(0.3);
     expect(POSITION_CDA.drops).toBeLessThanOrEqual(0.32);
     expect(POSITION_CDA.hoods).toBeGreaterThanOrEqual(0.33);
     expect(POSITION_CDA.hoods).toBeLessThanOrEqual(0.36);
-    expect(POSITION_CDA.upright).toBeGreaterThanOrEqual(0.4);
   });
 
   it('kit is ordered skinsuit < tight < loose < baggy, loose clothing adds 0.02–0.05', () => {

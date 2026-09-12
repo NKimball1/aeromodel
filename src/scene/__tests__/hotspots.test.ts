@@ -90,6 +90,15 @@ describe('hotspotEmitters', () => {
     }
   });
 
+  it("rider plume weights make up the rider's published share of drag (64–82 %, Malizia & Blocken 2021)", () => {
+    const w = HOTSPOT_VISUAL.weight;
+    const rider = w.shoulders + w.legs + w.kit + w.helmet;
+    const bike = w.frame + w.frontWheel + w.rearWheel + w.tires;
+    const share = rider / (rider + bike);
+    expect(share).toBeGreaterThanOrEqual(0.64);
+    expect(share).toBeLessThanOrEqual(0.82);
+  });
+
   it('a dirtier option makes a longer, wider plume', () => {
     const find = (rankValue: number) =>
       hotspotEmitters({ ...CLEAN_HOTSPOTS, frontWheel: rankValue }, skeleton, layout).find((e) => e.key === 'frontWheel')!;

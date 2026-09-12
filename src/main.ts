@@ -7,6 +7,7 @@ import { evaluate } from './ui/evaluate';
 import { loadState, saveState } from './ui/persist';
 import { Readout } from './ui/readout';
 import { sceneStateFor } from './ui/sceneMapping';
+import { SourcesDialog } from './ui/sourcesDialog';
 import { Store } from './ui/store';
 
 const app = document.getElementById('app')!;
@@ -26,9 +27,11 @@ const panel = new ControlPanel(
   () => store.update(() => ({ ...initialAppState, config: { ...initialAppState.config } })),
 );
 
+const sources = new SourcesDialog(app);
 const readout = new Readout(app, {
   onPin: () => store.update((s) => ({ ...s, baseline: currentSetup(s) })),
   onClear: () => store.update((s) => ({ ...s, baseline: null })),
+  onSources: () => sources.open(),
 });
 
 function render(state: AppState): void {

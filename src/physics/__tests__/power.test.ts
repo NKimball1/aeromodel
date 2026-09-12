@@ -41,7 +41,8 @@ describe('powerFromSpeed — sanity points', () => {
     const p = powerFromSpeed(flat(35), { cda: 0.3, crr: 0.004 });
     expect(p.aero + p.rolling + p.gravity + p.drivetrain).toBeCloseTo(p.total, 9);
     const atWheel = p.aero + p.rolling + p.gravity;
-    expect(p.drivetrain).toBeCloseTo(atWheel * (0.03 / 0.97), 9);
+    const loss = defaultEnvironment.drivetrainLoss;
+    expect(p.drivetrain).toBeCloseTo(atWheel * (loss / (1 - loss)), 9);
   });
 
   it('8 % climb at 15 km/h is gravity-dominated, ≈ 280–320 W', () => {

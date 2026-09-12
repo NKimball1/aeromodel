@@ -24,6 +24,7 @@ export const BREAKDOWN_SERIES = [
 export interface ReadoutActions {
   onPin: () => void;
   onClear: () => void;
+  onSources: () => void;
 }
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] => {
@@ -63,6 +64,13 @@ export class Readout {
 
     this.element.append(hero, this.tiles, breakdown, this.baseline);
     this.chart = new PowerChart(this.element);
+
+    const footer = el('div', 'readout-footer');
+    const sources = el('button', 'link-button', 'Sources & validation');
+    sources.type = 'button';
+    sources.addEventListener('click', this.actions.onSources);
+    footer.append(sources);
+    this.element.append(footer);
     container.appendChild(this.element);
   }
 
