@@ -27,7 +27,7 @@ export const WAKE_VISUAL = {
   /** Turbulence amount, 0..1: swirl amplitude and frequency. */
   chaos: [0.15, 1.0],
   /** Peak opacity of the shed smoke. */
-  opacity: [0.16, 0.42],
+  opacity: [0.34, 0.72],
   /** How much wider/taller the wake grows by its far end (×). */
   spread: 1.6,
   /** Below this airspeed (m/s) the wake fades out entirely. */

@@ -23,11 +23,11 @@ export const WIND_VISUAL = {
   zHalf: 1.3,
   /** Distance over which particles fade in/out at the volume ends, metres. */
   edgeFade: 0.8,
-  headAlpha: 0.34,
+  headAlpha: 0.4,
   /** Ribbon half-width in metres at the reference speed; grows a little with speed. */
   halfWidth: 0.0065,
   /** Extra opacity for streaks inside the wake (×, at full strength and drag). */
-  wakeAlphaBoost: 0.8,
+  wakeAlphaBoost: 1.4,
   /** Swirl amplitude at full wake strength and chaos, metres. */
   swirlAmplitude: 0.34,
   /** Swirl angular frequency range, rad/s at 30 km/h, from calm to chaotic wake. */
@@ -170,7 +170,7 @@ export class WindField {
       // Colour and opacity shift toward the wake colour with local strength and overall drag.
       const fade = Math.min(1, (x - cfg.xMin) / cfg.edgeFade, (cfg.xMax - x) / cfg.edgeFade);
       const tint = Math.min(1, Math.max(sGlobal * (0.45 + 0.55 * level) * 1.4, sLocal * 1.6));
-      const alphaBoost = Math.max(cfg.wakeAlphaBoost * sGlobal * level, 1.2 * sLocal);
+      const alphaBoost = Math.max(cfg.wakeAlphaBoost * sGlobal * level, 1.8 * sLocal);
       const alpha = Math.min(1, cfg.headAlpha * densityFade * Math.max(0, fade) * (1 + alphaBoost));
       const r = FREE_COLOR.r + (WAKE_COLOR.r - FREE_COLOR.r) * tint;
       const g = FREE_COLOR.g + (WAKE_COLOR.g - FREE_COLOR.g) * tint;

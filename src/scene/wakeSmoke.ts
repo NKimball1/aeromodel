@@ -17,7 +17,7 @@ export const SMOKE_VISUAL = {
   /** Fraction of the pool alive at drag level 0 and 1. */
   activeFraction: [0.3, 1] as const,
   /** Puff diameter at the rider and at the far end of the wake, metres. */
-  size: [0.07, 0.42] as const,
+  size: [0.08, 0.5] as const,
   /** Puff speed as a fraction of the (deficit-reduced) wake speed, randomised. */
   speedJitter: [0.55, 1.1] as const,
   /** Swirl around the wake axis, rad/s at full chaos. */
