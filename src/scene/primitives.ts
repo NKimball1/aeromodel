@@ -3,6 +3,8 @@ import {
   CapsuleGeometry,
   CylinderGeometry,
   ExtrudeGeometry,
+  LatheGeometry,
+  Vector2,
   Material,
   Mesh,
   Quaternion,
@@ -39,6 +41,21 @@ export class Segment {
 
   static capsule(radius: number, length: number, material: Material): Segment {
     return new Segment(new CapsuleGeometry(radius, length, 5, 16), material, length);
+  }
+
+  /**
+   * A capsule whose radius changes along its length: `r0` at the start,
+   * `r1` at the end, with an optional muscle bulge (extra radius, fraction
+   * along) between. Built along +Y like the other segments.
+   */
+  static taperedCapsule(
+    r0: number,
+    r1: number,
+    length: number,
+    material: Material,
+    bulge?: { extra: number; at: number; width?: number },
+  ): Segment {
+    return new Segment(taperedCapsuleGeometry(r0, r1, length, bulge), material, length);
   }
 
   static cylinder(radius: number, material: Material, radialSegments = 12): Segment {
@@ -119,4 +136,37 @@ function kammShape(chord: number, width: number): Shape {
   s.lineTo(-c, -tail);
   s.quadraticCurveTo(-c * 0.35, -half, noseX, -half);
   return s;
+}
+
+/** Profile-revolved capsule from y = −length/2 to +length/2, radius r0 → r1 with an optional bulge. */
+export function taperedCapsuleGeometry(
+  r0: number,
+  r1: number,
+  length: number,
+  bulge?: { extra: number; at: number; width?: number },
+): BufferGeometry {
+  const pts: Vector2[] = [];
+  const half = length / 2;
+  // Bottom cap.
+  for (let i = 0; i <= 6; i++) {
+    const a = -Math.PI / 2 + (Math.PI / 2) * (i / 6);
+    pts.push(new Vector2(Math.max(0.0005, r0 * Math.cos(a)), -half + r0 * Math.sin(a)));
+  }
+  // Body, with taper and bulge.
+  const steps = 14;
+  for (let i = 1; i < steps; i++) {
+    const t = i / steps;
+    let r = r0 + (r1 - r0) * t;
+    if (bulge) {
+      const w = bulge.width ?? 0.25;
+      r += bulge.extra * Math.exp(-((t - bulge.at) ** 2) / (2 * w * w));
+    }
+    pts.push(new Vector2(r, -half + length * t));
+  }
+  // Top cap.
+  for (let i = 0; i <= 6; i++) {
+    const a = (Math.PI / 2) * (i / 6);
+    pts.push(new Vector2(Math.max(0.0005, r1 * Math.cos(a)), half + r1 * Math.sin(a)));
+  }
+  return new LatheGeometry(pts, 20);
 }

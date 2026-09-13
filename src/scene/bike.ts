@@ -2,9 +2,13 @@ import {
   BoxGeometry,
   CatmullRomCurve3,
   CylinderGeometry,
+  ExtrudeGeometry,
   Group,
   Material,
   Mesh,
+  MeshPhysicalMaterial,
+  MeshStandardMaterial,
+  Shape,
   SphereGeometry,
   TorusGeometry,
   TubeGeometry,
@@ -33,6 +37,10 @@ import { Segment, v3 } from './primitives';
 import { WheelModel } from './wheel';
 
 const at = (p: V2, z = 0): V3 => ({ x: p.x, y: p.y, z });
+const BAR_TAPE = new MeshStandardMaterial({ color: 0x141518, roughness: 0.95 });
+const SADDLE = new MeshPhysicalMaterial({ color: 0x1b1d21, roughness: 0.55, clearcoat: 0.3, clearcoatRoughness: 0.5 });
+const BOTTLE = new MeshPhysicalMaterial({ color: 0xf2f2ef, roughness: 0.4, clearcoat: 0.5 });
+const BOTTLE_CAP = new MeshStandardMaterial({ color: 0x2f62ad, roughness: 0.6 });
 const round = (d: number): TubeSpec => ({ profile: 'round', chord: d, width: d });
 const kamm = (chord: number, width: number): TubeSpec => ({ profile: 'kamm', chord, width });
 
@@ -78,7 +86,7 @@ export class BikeModel {
     this.group.add(this.spider);
 
     this.cranks = [1, -1].map(() => {
-      const s = Segment.cylinder(0.011, materials.component, 8);
+      const s = new Segment(new BoxGeometry(0.03, 1, 0.014), materials.carbon, 1);
       this.group.add(s.mesh);
       return s;
     });
@@ -138,7 +146,7 @@ export class BikeModel {
     const sides = [skeleton.right, skeleton.left];
     sides.forEach((side, i) => {
       const z = side.pedal.z > 0 ? 0.085 : -0.085;
-      this.cranks[i]!.set(v3(BB.x, BB.y, z), v3(side.pedal.x, side.pedal.y, z), 1.4, 0.8);
+      this.cranks[i]!.set(v3(BB.x, BB.y, z), v3(side.pedal.x, side.pedal.y, z));
       this.pedals[i]!.position.set(side.pedal.x, side.pedal.y, side.pedal.z);
     });
     const r = skeleton.right.pedal;
@@ -185,6 +193,14 @@ class FrameBuilder {
     this.drivetrain();
     this.brakes();
     this.saddle();
+    this.bottle();
+  }
+
+  /** A paint-coloured sphere that hides a tube junction. */
+  private blend(p: V2, rx: number, ry: number, rz: number, z = 0): void {
+    const b = this.mesh(new Mesh(new SphereGeometry(1, 16, 12), this.paint));
+    b.position.set(p.x, p.y, z);
+    b.scale.set(rx, ry, rz);
   }
 
   private tube(spec: TubeSpec, from: V3, to: V3, material: Material = this.paint): void {
@@ -218,10 +234,10 @@ class FrameBuilder {
     this.tube(t.seat, at(BB), at(seatTop));
     this.tube(t.seatpost, at(L.seatCluster), at({ x: SADDLE_TOP.x, y: SADDLE_TOP.y - 0.03 }), materials.carbon);
 
-    // Smooth the seat cluster and head tube junctions.
-    const cluster = this.mesh(new Mesh(new SphereGeometry(1, 16, 12), this.paint));
-    cluster.position.set(L.seatCluster.x, L.seatCluster.y, 0);
-    cluster.scale.set(Math.max(t.seat.chord, t.top.chord) * 0.55, 0.03, Math.max(t.seat.width, t.top.width) * 0.55);
+    // Smooth the junctions: seat cluster, top and down tube at the head tube.
+    this.blend(L.seatCluster, Math.max(t.seat.chord, t.top.chord) * 0.55, 0.03, Math.max(t.seat.width, t.top.width) * 0.55);
+    this.blend(L.topTubeEnd, t.top.chord * 0.55, t.top.chord * 0.5, t.top.width * 0.52);
+    this.blend(L.downTubeEnd, t.down.chord * 0.55, t.down.chord * 0.5, t.down.width * 0.52);
 
     for (const s of [1, -1]) {
       this.tube(t.chainstay, at(BB, s * 0.04), at(L.rearAxle, s * 0.064));
@@ -287,8 +303,18 @@ class FrameBuilder {
         new Vector3(clamp.x - 0.005, clamp.y - 0.115, z + flare),
       ]);
       this.mesh(new Mesh(new TubeGeometry(curve, 32, BAR_TUBE_RADIUS, 10), drops));
-      // Brake/shift hood on the forward bend.
-      this.tube(round(0.034), v3(clamp.x + 0.065, clamp.y + 0.008, z), v3(clamp.x + 0.12, clamp.y + 0.022, z), materials.component);
+      // Bar tape: a slightly fatter, matte wrap from the bend round the drop.
+      const tapeCurve = new CatmullRomCurve3(curve.getPoints(40).slice(8));
+      this.mesh(new Mesh(new TubeGeometry(tapeCurve, 32, BAR_TUBE_RADIUS * 1.28, 12), BAR_TAPE));
+      // Brake/shift hood: a rubber body over the bend with a lever blade hanging forward-down.
+      const hood = Segment.taperedCapsule(0.02, 0.016, 0.075, materials.component).set(
+        v3(clamp.x + 0.062, clamp.y + 0.012, z),
+        v3(clamp.x + 0.13, clamp.y + 0.03, z),
+      );
+      this.group.add(hood.mesh);
+      const blade = this.mesh(new Mesh(new BoxGeometry(0.012, 0.09, 0.02), materials.carbon));
+      blade.position.set(clamp.x + 0.128, clamp.y - 0.02, z);
+      blade.rotation.z = 0.25;
     }
   }
 
@@ -296,9 +322,13 @@ class FrameBuilder {
     const { L } = this;
     const r = L.rearAxle;
 
-    const cassette = this.mesh(new Mesh(new CylinderGeometry(0.02, 0.05, 0.035, 24), materials.alloy));
-    cassette.rotation.x = Math.PI / 2;
-    cassette.position.set(r.x, r.y, 0.042);
+    // Cassette: 11 stacked sprockets, small on the outside.
+    for (let i = 0; i < 11; i++) {
+      const radius = 0.022 + (0.052 - 0.022) * (i / 10);
+      const sprocket = this.mesh(new Mesh(new CylinderGeometry(radius, radius, 0.0018, 32), materials.alloy));
+      sprocket.rotation.x = Math.PI / 2;
+      sprocket.position.set(r.x, r.y, 0.06 - i * 0.0038);
+    }
 
     const pulley = v3(r.x + 0.012, r.y - 0.088, 0.052);
     const chain = round(0.007);
@@ -324,10 +354,70 @@ class FrameBuilder {
   }
 
   private saddle(): void {
-    // Short-nose race saddle: wide at the back, narrow nose.
-    const shell = this.mesh(new Mesh(new BoxGeometry(0.15, 0.024, 0.14), materials.component));
-    shell.position.set(SADDLE_TOP.x - 0.05, SADDLE_TOP.y - 0.012, 0);
-    const nose = this.mesh(new Mesh(new BoxGeometry(0.1, 0.02, 0.055), materials.component));
-    nose.position.set(SADDLE_TOP.x + 0.07, SADDLE_TOP.y - 0.014, 0);
+    // Short-nose race saddle: outline drawn in top view (x forward, y = sideways), extruded thin.
+    const outline = new Shape();
+    outline.moveTo(-0.11, -0.065);
+    outline.quadraticCurveTo(-0.13, 0, -0.11, 0.065);
+    outline.quadraticCurveTo(-0.02, 0.06, 0.06, 0.028);
+    outline.quadraticCurveTo(0.12, 0.02, 0.135, 0);
+    outline.quadraticCurveTo(0.12, -0.02, 0.06, -0.028);
+    outline.quadraticCurveTo(-0.02, -0.06, -0.11, -0.065);
+    const geo = new ExtrudeGeometry(outline, {
+      depth: 0.012,
+      bevelEnabled: true,
+      bevelThickness: 0.008,
+      bevelSize: 0.006,
+      bevelSegments: 3,
+    });
+    geo.rotateX(Math.PI / 2); // lie flat: extrusion (z) becomes vertical
+    const shell = this.mesh(new Mesh(geo, SADDLE));
+    shell.position.set(SADDLE_TOP.x - 0.01, SADDLE_TOP.y - 0.004, 0);
+    // Rails and clamp.
+    for (const s of [1, -1]) {
+      this.tube(
+        round(0.007),
+        v3(SADDLE_TOP.x - 0.1, SADDLE_TOP.y - 0.03, s * 0.022),
+        v3(SADDLE_TOP.x + 0.06, SADDLE_TOP.y - 0.03, s * 0.022),
+        materials.alloy,
+      );
+    }
+    const clampBox = this.mesh(new Mesh(new BoxGeometry(0.04, 0.02, 0.05), materials.component));
+    clampBox.position.set(SADDLE_TOP.x - 0.025, SADDLE_TOP.y - 0.04, 0);
+  }
+
+  private bottle(): void {
+    // One bottle in a cage on the down tube, a third of the way up.
+    const { L } = this;
+    const a = L.downTubeStart;
+    const b = L.downTubeEnd;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    // Outward normal: up and back, toward the inside of the main triangle.
+    const nx = -dy / len;
+    const ny = dx / len;
+    const lift = this.style.tubes.down.chord / 2 + 0.036;
+    const pt = (t: number): V3 => v3(a.x + dx * t + nx * lift, a.y + dy * t + ny * lift, 0);
+    const from = pt(0.3);
+    const to = pt(0.62);
+    const body = Segment.cylinder(0.035, BOTTLE, 20).set(from, to);
+    this.group.add(body.mesh);
+    const cap = Segment.taperedCapsule(0.03, 0.012, 0.03, BOTTLE_CAP).set(
+      to,
+      v3(to.x + (dx / len) * 0.035, to.y + (dy / len) * 0.035, 0),
+    );
+    this.group.add(cap.mesh);
+    // Cage: a ring around the bottle's middle and a strut down to the tube.
+    const mid = v3((from.x + to.x) / 2, (from.y + to.y) / 2, 0);
+    const ring = this.mesh(new Mesh(new TorusGeometry(0.038, 0.003, 8, 32), materials.component));
+    ring.position.set(mid.x, mid.y, 0);
+    ring.rotation.z = Math.atan2(dy, dx) + Math.PI / 2;
+    ring.rotation.x = Math.PI / 2;
+    this.tube(
+      round(0.006),
+      v3(mid.x - nx * 0.038, mid.y - ny * 0.038, 0),
+      v3(mid.x - nx * lift, mid.y - ny * lift, 0),
+      materials.component,
+    );
   }
 }

@@ -6,6 +6,7 @@ import { BikeModel } from './bike';
 import { CameraRig, type CameraView } from './cameraRig';
 import { TunnelEnvironment } from './environment';
 import { POSE_PRESETS, lerpPose, solveSkeleton, type PoseParams } from './pose';
+import { PostPipeline } from './postprocessing';
 import { RiderModel } from './rider';
 import { SPEED_VISUAL } from './speedVisuals';
 import { bodyExtent, dragLevel, wakeShape, type WakeShape } from './wake';
@@ -49,6 +50,7 @@ export class AeroScene {
   private readonly scene = new Scene();
   private readonly rig: CameraRig;
   private readonly env: TunnelEnvironment;
+  private readonly post: PostPipeline;
   private readonly bikeRoot = new Group();
   private readonly bike = new BikeModel();
   private readonly rider = new RiderModel();
@@ -75,7 +77,8 @@ export class AeroScene {
     this.hotspotLevels = { ...initial.hotspots };
 
     this.renderer = new WebGLRenderer({ antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // 1.5 keeps the AO and bloom passes affordable on high-DPI laptops.
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = PCFSoftShadowMap;
     this.renderer.toneMapping = ACESFilmicToneMapping;
@@ -91,9 +94,11 @@ export class AeroScene {
 
     this.rig = new CameraRig(this.renderer.domElement, 'threeQuarter');
     this.env = new TunnelEnvironment(this.scene, this.renderer.capabilities.getMaxAnisotropy());
+    this.post = new PostPipeline(this.renderer, this.scene, this.rig.camera);
 
     this.bikeRoot.add(this.bike.group, this.rider.group);
     this.scene.add(this.bikeRoot, this.wind.object, this.smoke.object, this.hotspotSmoke.object);
+    this.post.excludeFromAO(this.wind.object, this.smoke.object, this.hotspotSmoke.object, this.bike.frontWheel.blurObject, this.bike.rearWheel.blurObject);
 
     this.applyEquipment();
 
@@ -142,6 +147,7 @@ export class AeroScene {
     cancelAnimationFrame(this.frameHandle);
     this.resizeObserver.disconnect();
     this.rig.dispose();
+    this.post.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
@@ -184,13 +190,14 @@ export class AeroScene {
     this.smoke.update(dt, s.airSpeedMs, wake);
     this.hotspotSmoke.update(dt, s.airSpeedMs, emitters, wake.presence);
     this.rig.update(dt);
-    this.renderer.render(this.scene, this.rig.camera);
+    this.post.render();
   }
 
   private resize(): void {
     const { clientWidth: w, clientHeight: h } = this.container;
     if (w === 0 || h === 0) return;
     this.renderer.setSize(w, h);
+    this.post.setSize(w, h);
     this.smoke.setScale(h * this.renderer.getPixelRatio(), this.rig.camera.fov);
     this.hotspotSmoke.setScale(h * this.renderer.getPixelRatio(), this.rig.camera.fov);
     const { left, right, bottom } = this.insets;

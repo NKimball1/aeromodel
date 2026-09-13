@@ -32,6 +32,8 @@ const ROTOR_Z = -0.058;
  */
 export class WheelModel {
   readonly group = new Group();
+  /** Holds the translucent spin-blur disc; kept separate so post-processing can skip it. */
+  readonly blurObject = new Group();
   private readonly spinGroup = new Group();
   private rim: Mesh | null = null;
   private tire: Mesh | null = null;
@@ -53,7 +55,7 @@ export class WheelModel {
   private tireWidthMm = -1;
 
   constructor(rotorRadius: number) {
-    this.group.add(this.spinGroup);
+    this.group.add(this.spinGroup, this.blurObject);
     const hub = new Mesh(new CylinderGeometry(0.018, 0.018, 0.1, 16), materials.alloy);
     hub.rotation.x = Math.PI / 2;
     hub.castShadow = true;
@@ -100,7 +102,7 @@ export class WheelModel {
       this.spinGroup.add(this.spokes);
       this.blur = new Mesh(new RingGeometry(0.03, RIM_BEAD_RADIUS - depth, 48), this.blurMaterial);
       this.blur.renderOrder = 1;
-      this.group.add(this.blur);
+      this.blurObject.add(this.blur);
     }
 
     // A pale decal on each rim face so rotation is visible on deep rims and discs.

@@ -48,6 +48,7 @@ src/
     wakeSmoke.ts     soft smoke puffs shed from the rider's back (custom point shader)
     environment.ts   sky dome, rolling tarmac road (procedural), sun + sky light, speed arrow
     cameraRig.ts     orbit camera + side / 3/4 front / rear-wake presets
+    postprocessing.ts  ambient occlusion + subtle bloom + tone mapping (MSAA target)
     AeroScene.ts     render loop; takes a SceneState, never calls physics
   ui/             controls, readouts, and the physics-to-scene wiring
     appState.ts      everything the user controls, in SI units; baseline snapshot
