@@ -1,13 +1,7 @@
-import {
-  BufferAttribute,
-  BufferGeometry,
-  Color,
-  DynamicDrawUsage,
-  LineBasicMaterial,
-  LineSegments,
-} from 'three';
+import { Color, type Mesh } from 'three';
 import { PALETTE } from './materials';
 import { SPEED_VISUAL } from './speedVisuals';
+import { StreakMesh } from './streakMesh';
 import { deflect, type Capsule, type Deflected } from './deflection';
 import { hotspotStrength, type Emitter } from './hotspots';
 import { wakeStrength, type WakeShape } from './wake';
@@ -20,7 +14,7 @@ const scratch: Deflected = { x: 0, y: 0, z: 0, amount: 0 };
  * Visual tuning for the airflow. Illustrative only: nothing here is physics.
  */
 export const WIND_VISUAL = {
-  count: 1700,
+  count: 1500,
   /** Upstream / downstream edges of the particle volume, metres. */
   xMax: 3.6,
   xMin: -5.6,
@@ -29,7 +23,9 @@ export const WIND_VISUAL = {
   zHalf: 1.3,
   /** Distance over which particles fade in/out at the volume ends, metres. */
   edgeFade: 0.8,
-  headAlpha: 0.55,
+  headAlpha: 0.34,
+  /** Ribbon half-width in metres at the reference speed; grows a little with speed. */
+  halfWidth: 0.0065,
   /** Extra opacity for streaks inside the wake (×, at full strength and drag). */
   wakeAlphaBoost: 0.8,
   /** Swirl amplitude at full wake strength and chaos, metres. */
@@ -46,13 +42,13 @@ export const WIND_VISUAL = {
  * streaks bend around the rider instead of passing through.
  */
 export class WindField {
-  readonly object: LineSegments;
+  readonly object: Mesh;
+  private readonly streaks: StreakMesh;
   private readonly heads: Float32Array;
   private readonly jitter: Float32Array;
   private readonly phase: Float32Array;
   private readonly positions: Float32Array;
   private readonly colors: Float32Array;
-  private readonly geometry: BufferGeometry;
   private time = 0;
 
   constructor(private readonly cfg = WIND_VISUAL) {
@@ -69,15 +65,8 @@ export class WindField {
       this.phase[i * 2 + 1] = Math.random() * Math.PI * 2;
     }
 
-    this.geometry = new BufferGeometry();
-    const pos = new BufferAttribute(this.positions, 3).setUsage(DynamicDrawUsage);
-    const col = new BufferAttribute(this.colors, 4).setUsage(DynamicDrawUsage);
-    this.geometry.setAttribute('position', pos);
-    this.geometry.setAttribute('color', col);
-
-    const material = new LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false });
-    this.object = new LineSegments(this.geometry, material);
-    this.object.frustumCulled = false;
+    this.streaks = new StreakMesh(n, this.positions, this.colors);
+    this.object = this.streaks.mesh;
   }
 
   /**
@@ -113,6 +102,7 @@ export class WindField {
     const tTail = t - trailSeconds * speedRatio;
     // Long fast streaks overlap into a curtain; thin them out as they lengthen.
     const densityFade = 1 / Math.sqrt(Math.max(1, trailFactor));
+    this.streaks.setHalfWidth(cfg.halfWidth * (0.8 + 0.2 * Math.min(2, trailFactor)));
 
     for (let i = 0; i < n; i++) {
       const i3 = i * 3;
@@ -195,8 +185,7 @@ export class WindField {
       colors[i8 + 6] = b;
       colors[i8 + 7] = 0;
     }
-    this.geometry.attributes.position!.needsUpdate = true;
-    this.geometry.attributes.color!.needsUpdate = true;
+    this.streaks.markDirty();
   }
 
   private respawn(i: number, x: number): void {

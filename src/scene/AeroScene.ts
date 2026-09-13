@@ -1,4 +1,5 @@
-import { Group, PCFSoftShadowMap, Scene, WebGLRenderer } from 'three';
+import { ACESFilmicToneMapping, Group, PCFSoftShadowMap, PMREMGenerator, Scene, WebGLRenderer } from 'three';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import type { BikeType, FrontWheelDepth, Helmet, Kit, Position, TireWidth, WheelDepth } from '../physics';
 import { HEAD_RADIUS, REFERENCE_TIRE_WIDTH_M } from './bikeGeometry';
 import { BikeModel } from './bike';
@@ -77,7 +78,16 @@ export class AeroScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = PCFSoftShadowMap;
+    this.renderer.toneMapping = ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.0;
     container.appendChild(this.renderer.domElement);
+
+    // Image-based lighting from a neutral studio room: gives paint, carbon and
+    // alloy their reflections without loading any files.
+    const pmrem = new PMREMGenerator(this.renderer);
+    this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    this.scene.environmentIntensity = 0.55;
+    pmrem.dispose();
 
     this.rig = new CameraRig(this.renderer.domElement, 'threeQuarter');
     this.env = new TunnelEnvironment(this.scene, this.renderer.capabilities.getMaxAnisotropy());

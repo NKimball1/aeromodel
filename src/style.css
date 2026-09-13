@@ -34,7 +34,8 @@ body,
   --good-text: #006300;
   --critical-text: #b83232;
   --accent: #1c5cab;
-  --panel-shadow: 0 2px 14px rgba(0, 0, 0, 0.07);
+  --panel-shadow: 0 6px 24px rgba(15, 23, 42, 0.1), 0 1px 2px rgba(15, 23, 42, 0.06);
+  --panel-bg: rgba(253, 253, 252, 0.86);
 }
 
 /* --- Controls (lil-gui, light theme) ------------------------------------- */
@@ -44,9 +45,11 @@ body,
   left: 12px;
   max-height: calc(100% - 24px);
   overflow-y: auto;
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: var(--panel-shadow);
   border: 1px solid var(--border);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
 }
 
 .panel-controls .lil-gui.root {
@@ -54,7 +57,7 @@ body,
 }
 
 .panel-controls .lil-gui {
-  --background-color: var(--surface-1);
+  --background-color: var(--panel-bg);
   --text-color: var(--text-primary);
   --title-background-color: var(--surface-2);
   --title-text-color: var(--text-primary);
@@ -91,10 +94,12 @@ body,
   padding: 16px;
   display: grid;
   gap: 14px;
-  background: var(--surface-1);
+  background: var(--panel-bg);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
   color: var(--text-primary);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: var(--panel-shadow);
   font-size: 13px;
 }
@@ -106,10 +111,11 @@ body,
 }
 
 .hero-value {
-  font-size: 52px;
-  font-weight: 600;
+  font-size: 54px;
+  font-weight: 700;
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
 }
 
 .hero-unit {

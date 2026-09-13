@@ -40,12 +40,13 @@ src/
     bike.ts          frame per type (Kammtail/oval/round tubes), cockpit, disc brakes, drivetrain, aerobars
     wheel.ts         lathe rims by depth, disc, tire by width, rotors, spoke blur at speed
     wind.ts          streak particles +X to -X; slow, swirl and tint inside the wake
+    streakMesh.ts    instanced soft ribbons that draw the streaks with real width
     deflection.ts    body capsules from the skeleton; pushes streaks around the rider; pure, tested
     hotspots.ts      per-part turbulence plumes (shoulders, legs, clothing, helmet, frame, wheels, tires); pure, tested
     hotspotSmoke.ts  smoke shed from each component, sized by how draggy that option is
     wake.ts          CdA -> wake shape (length, width, deficit, chaos, opacity); pure, tested
     wakeSmoke.ts     soft smoke puffs shed from the rider's back (custom point shader)
-    environment.ts   tunnel, rolling tarmac road (procedural texture), lights, speed arrow
+    environment.ts   sky dome, rolling tarmac road (procedural), sun + sky light, speed arrow
     cameraRig.ts     orbit camera + side / 3/4 front / rear-wake presets
     AeroScene.ts     render loop; takes a SceneState, never calls physics
   ui/             controls, readouts, and the physics-to-scene wiring

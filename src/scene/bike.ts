@@ -5,7 +5,6 @@ import {
   Group,
   Material,
   Mesh,
-  MeshStandardMaterial,
   SphereGeometry,
   TorusGeometry,
   TubeGeometry,
@@ -28,7 +27,7 @@ import {
   type V3,
 } from './bikeGeometry';
 import { FRAME_STYLES, frameLayout, type FrameLayout, type FrameStyle, type TubeSpec } from './bikeTypes';
-import { materials } from './materials';
+import { createFramePaint, materials } from './materials';
 import type { Skeleton } from './pose';
 import { Segment, v3 } from './primitives';
 import { WheelModel } from './wheel';
@@ -44,7 +43,7 @@ export class BikeModel {
   readonly rearWheel = new WheelModel(0.07);
 
   private frame = new Group();
-  private frameMaterial: MeshStandardMaterial | null = null;
+  private frameMaterial: Material | null = null;
   private type: BikeType | null = null;
 
   private readonly spider: Group;
@@ -115,7 +114,7 @@ export class BikeModel {
     this.disposeFrame();
     const style = FRAME_STYLES[type];
     const layout = frameLayout(style);
-    this.frameMaterial = new MeshStandardMaterial({ color: style.color, roughness: 0.32, metalness: 0.25 });
+    this.frameMaterial = createFramePaint(style.color);
     this.frontWheel.group.position.set(layout.frontAxle.x, layout.frontAxle.y, 0);
     this.rearWheel.group.position.set(layout.rearAxle.x, layout.rearAxle.y, 0);
     new FrameBuilder(this.frame, style, layout, this.frameMaterial).build();

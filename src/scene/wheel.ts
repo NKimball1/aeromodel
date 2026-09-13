@@ -1,19 +1,19 @@
 import {
   BoxGeometry,
-  BufferGeometry,
   CylinderGeometry,
   DoubleSide,
-  Float32BufferAttribute,
   Group,
+  InstancedMesh,
   LatheGeometry,
-  LineBasicMaterial,
-  LineSegments,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  Quaternion,
   RingGeometry,
   TorusGeometry,
   Vector2,
+  Vector3,
 } from 'three';
 import { RIM_BEAD_RADIUS, RIM_WIDTH } from './bikeGeometry';
 import { PALETTE, materials } from './materials';
@@ -35,10 +35,10 @@ export class WheelModel {
   private readonly spinGroup = new Group();
   private rim: Mesh | null = null;
   private tire: Mesh | null = null;
-  private spokes: LineSegments | null = null;
+  private spokes: InstancedMesh | null = null;
   private blur: Mesh | null = null;
   private decals: Mesh[] = [];
-  private readonly spokeMaterial = new LineBasicMaterial({ color: 0x55595f, transparent: true });
+  private readonly spokeMaterial = new MeshStandardMaterial({ color: 0x9a9ea4, roughness: 0.35, metalness: 0.8, transparent: true });
   private readonly decalMaterial = new MeshStandardMaterial({ color: PALETTE.decal, roughness: 0.6, transparent: true });
   private readonly blurMaterial = new MeshBasicMaterial({
     color: 0x6a6f76,
@@ -176,24 +176,34 @@ function rimProfile(depth: number, disc: boolean): Vector2[] {
   ];
 }
 
-function buildSpokes(depth: number, count: number, material: LineBasicMaterial): LineSegments {
+const SPOKE_RADIUS = 0.0011;
+const UP = new Vector3(0, 1, 0);
+
+/** Real thin cylinders, one instance per spoke, laced two-cross-ish between hub flanges and rim. */
+function buildSpokes(depth: number, count: number, material: MeshStandardMaterial): InstancedMesh {
   const inner = RIM_BEAD_RADIUS - depth;
-  const pts: number[] = [];
+  const geo = new CylinderGeometry(SPOKE_RADIUS, SPOKE_RADIUS, 1, 6, 1, true);
+  const mesh = new InstancedMesh(geo, material, count);
+  const a = new Vector3();
+  const b = new Vector3();
+  const dir = new Vector3();
+  const m = new Matrix4();
+  const q = new Quaternion();
+  const scale = new Vector3();
   for (let i = 0; i < count; i++) {
-    const a = (i / count) * Math.PI * 2;
+    const ang = (i / count) * Math.PI * 2;
     // Tangential-ish lacing: the hub end leads the rim end slightly.
-    const hubA = a + (i % 2 === 0 ? 0.35 : -0.35);
+    const hubA = ang + (i % 2 === 0 ? 0.35 : -0.35);
     const side = i % 2 === 0 ? 1 : -1;
-    pts.push(
-      Math.cos(hubA) * HUB_FLANGE_RADIUS,
-      Math.sin(hubA) * HUB_FLANGE_RADIUS,
-      side * HUB_FLANGE_OFFSET,
-      Math.cos(a) * inner,
-      Math.sin(a) * inner,
-      0,
-    );
+    a.set(Math.cos(hubA) * HUB_FLANGE_RADIUS, Math.sin(hubA) * HUB_FLANGE_RADIUS, side * HUB_FLANGE_OFFSET);
+    b.set(Math.cos(ang) * inner, Math.sin(ang) * inner, 0);
+    dir.subVectors(b, a);
+    const len = dir.length();
+    q.setFromUnitVectors(UP, dir.divideScalar(len));
+    scale.set(1, len, 1);
+    m.compose(a.lerp(b, 0.5), q, scale);
+    mesh.setMatrixAt(i, m);
   }
-  const geo = new BufferGeometry();
-  geo.setAttribute('position', new Float32BufferAttribute(pts, 3));
-  return new LineSegments(geo, material);
+  mesh.castShadow = true;
+  return mesh;
 }

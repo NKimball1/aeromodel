@@ -47,7 +47,11 @@ export class RiderModel {
   private readonly neck: Segment;
   private readonly headGroup = new Group();
   private readonly helmets: Record<Helmet, Group>;
+  private readonly chest: Mesh;
   private readonly shoulders: Mesh[];
+  private readonly elbows: Mesh[];
+  private readonly knees: Mesh[];
+  private readonly ankles: Mesh[];
   private readonly upperArms: Segment[];
   private readonly forearms: Segment[];
   private readonly hands: Mesh[];
@@ -73,8 +77,15 @@ export class RiderModel {
     for (const h of Object.values(this.helmets)) this.headGroup.add(h);
     this.group.add(this.headGroup);
 
+    // A rounded chest/shoulder mass so the torso doesn't end in a bare capsule cap.
+    this.chest = this.addMesh(new Mesh(new SphereGeometry(1, 24, 16), material));
+
     const pair = <T>(make: () => T): T[] => [make(), make()];
-    this.shoulders = pair(() => this.addMesh(new Mesh(new SphereGeometry(0.058, 16, 12), material)));
+    this.shoulders = pair(() => this.addMesh(new Mesh(new SphereGeometry(0.058, 20, 14), material)));
+    // Joint spheres hide the seams where capsules meet at an angle.
+    this.elbows = pair(() => this.addMesh(new Mesh(new SphereGeometry(0.04, 16, 12), materials.skin)));
+    this.knees = pair(() => this.addMesh(new Mesh(new SphereGeometry(0.052, 16, 12), materials.skin)));
+    this.ankles = pair(() => this.addMesh(new Mesh(new SphereGeometry(0.036, 14, 10), materials.shoe)));
     this.upperArms = pair(() => this.addSeg(Segment.capsule(0.043, UPPER_ARM_LENGTH, material)));
     this.forearms = pair(() => this.addSeg(Segment.capsule(0.035, FOREARM_LENGTH, materials.skin)));
     this.hands = pair(() => this.addMesh(new Mesh(new SphereGeometry(0.042, 14, 10), materials.glove)));
@@ -90,6 +101,7 @@ export class RiderModel {
     this.kit = kit;
     const sleeve = KIT_LOOK[kit].longSleeves ? this.kitMaterial : materials.skin;
     for (const f of this.forearms) f.mesh.material = sleeve;
+    for (const e of this.elbows) e.material = sleeve;
   }
 
   setHelmet(helmet: Helmet): void {
@@ -114,6 +126,9 @@ export class RiderModel {
     this.torso.set(s.pelvis, chestEnd, 1.1 * girth, 1.55 * girth);
     this.pelvis.position.set(s.pelvis.x, s.pelvis.y, 0);
     this.pelvis.rotation.z = Math.atan2(ty, tx);
+    this.chest.position.set(chestEnd.x, chestEnd.y, 0);
+    this.chest.rotation.z = Math.atan2(ty, tx);
+    this.chest.scale.set(0.11 * girth, 0.115 * girth, 0.2 * girth);
 
     this.neck.set({ x: s.chest.x, y: s.chest.y, z: 0 }, s.head);
     this.headGroup.position.set(s.head.x, s.head.y, s.head.z);
@@ -125,6 +140,10 @@ export class RiderModel {
       this.shoulders[i]!.scale.setScalar(girth);
       this.upperArms[i]!.set(side.shoulder, side.elbow, girth);
       this.forearms[i]!.set(side.elbow, side.hand, sleeveGirth);
+      this.elbows[i]!.position.set(side.elbow.x, side.elbow.y, side.elbow.z);
+      this.elbows[i]!.scale.setScalar(sleeveGirth);
+      this.knees[i]!.position.set(side.knee.x, side.knee.y, side.knee.z);
+      this.ankles[i]!.position.set(side.ankle.x, side.ankle.y, side.ankle.z);
       this.hands[i]!.position.set(side.hand.x, side.hand.y, side.hand.z);
       this.thighs[i]!.set(side.hip, side.knee);
       this.shanks[i]!.set(side.knee, side.ankle);

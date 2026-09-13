@@ -9,7 +9,7 @@ export const HOTSPOT_SMOKE_VISUAL = {
   /** Puff diameter at the emitter and at the plume's end, metres (× level factor). */
   size: [0.05, 0.3] as const,
   /** Peak opacity at full level and weight. */
-  opacity: 0.72,
+  opacity: 0.6,
   /** Drift speed as a fraction of airspeed: dirty air is slow air. */
   drift: [0.35, 0.8] as const,
   /** Swirl around the plume axis, rad/s at level 1. */
