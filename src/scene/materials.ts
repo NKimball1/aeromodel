@@ -69,28 +69,80 @@ export function createFramePaint(color: number): MeshPhysicalMaterial {
 export interface FlutterUniforms {
   uTime: { value: number };
   uFlutter: { value: number };
+  /** World-space heights the kit gradient runs between (hips → shoulders). Set per frame from the pose. */
+  uGradY0: { value: number };
+  uGradY1: { value: number };
 }
 
+/** Kit gradient stops, bottom → top. Cool: navy, electric blue, aqua. */
+export const KIT_GRADIENT = {
+  low: 0x14306e,
+  mid: 0x2b6cd4,
+  high: 0x3fd0d6,
+} as const;
+
 /**
- * Kit fabric: a standard material whose vertices ripple along their normals.
- * `uFlutter` is the ripple amplitude in metres (0 = skin-tight), `uTime`
- * advances faster in stronger wind.
+ * Kit fabric: a physical material whose vertices ripple along their normals
+ * and whose colour runs through a vertical gradient. `uFlutter` is the
+ * ripple amplitude in metres (0 = skin-tight), `uTime` advances faster in
+ * stronger wind, `uGradY0/1` frame the gradient on the body.
  */
 export function createKitMaterial(): { material: MeshPhysicalMaterial; uniforms: FlutterUniforms } {
-  const uniforms: FlutterUniforms = { uTime: { value: 0 }, uFlutter: { value: 0 } };
+  const uniforms: FlutterUniforms = {
+    uTime: { value: 0 },
+    uFlutter: { value: 0 },
+    uGradY0: { value: 0.8 },
+    uGradY1: { value: 1.4 },
+  };
   // Sheen gives lycra its soft edge highlight.
-  const material = new MeshPhysicalMaterial({ color: PALETTE.kit, roughness: 0.7, sheen: 0.6, sheenRoughness: 0.6, sheenColor: new Color(0x6f9be0) });
+  const material = new MeshPhysicalMaterial({
+    color: 0xffffff,
+    roughness: 0.7,
+    sheen: 0.6,
+    sheenRoughness: 0.6,
+    sheenColor: new Color(0x8fb6ea),
+  });
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = uniforms.uTime;
     shader.uniforms.uFlutter = uniforms.uFlutter;
+    shader.uniforms.uGradY0 = uniforms.uGradY0;
+    shader.uniforms.uGradY1 = uniforms.uGradY1;
+    shader.uniforms.uGradLow = { value: new Color(KIT_GRADIENT.low) };
+    shader.uniforms.uGradMid = { value: new Color(KIT_GRADIENT.mid) };
+    shader.uniforms.uGradHigh = { value: new Color(KIT_GRADIENT.high) };
     shader.vertexShader =
-      'uniform float uTime;\nuniform float uFlutter;\n' +
-      shader.vertexShader.replace(
-        '#include <begin_vertex>',
-        `#include <begin_vertex>
+      ['uniform float uTime;', 'uniform float uFlutter;', 'varying vec3 vKitPos;', ''].join(String.fromCharCode(10)) +
+      shader.vertexShader
+        .replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>
         float ripple = 0.6 * sin(position.y * 38.0 - uTime * 9.0 + position.z * 21.0)
                      + 0.4 * sin(position.x * 45.0 + position.y * 17.0 - uTime * 13.0);
         transformed += objectNormal * uFlutter * ripple;`,
+        )
+        .replace(
+          '#include <worldpos_vertex>',
+          `#include <worldpos_vertex>
+        vKitPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`,
+        );
+    shader.fragmentShader =
+      [
+        'uniform float uGradY0;',
+        'uniform float uGradY1;',
+        'uniform vec3 uGradLow;',
+        'uniform vec3 uGradMid;',
+        'uniform vec3 uGradHigh;',
+        'varying vec3 vKitPos;',
+        '',
+      ].join(String.fromCharCode(10)) +
+      shader.fragmentShader.replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+        // Height up the body, with a slight lean so the bands run diagonally like a printed panel.
+        float t = clamp((vKitPos.y - uGradY0 + vKitPos.x * 0.12) / max(0.05, uGradY1 - uGradY0), 0.0, 1.0);
+        vec3 grad = t < 0.55 ? mix(uGradLow, uGradMid, smoothstep(0.0, 0.55, t))
+                             : mix(uGradMid, uGradHigh, smoothstep(0.55, 1.0, t));
+        diffuseColor.rgb *= grad;`,
       );
   };
   return { material, uniforms };

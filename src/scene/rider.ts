@@ -141,6 +141,9 @@ export class RiderModel {
     this.kitTime += dt * (0.4 + Math.abs(airSpeedMs) / 5);
     this.kitUniforms.uTime.value = this.kitTime;
     this.kitUniforms.uFlutter.value = look.flutter * windFactor;
+    // Gradient runs from just below the hips to the top of the shoulders, whatever the pose.
+    this.kitUniforms.uGradY0.value = s.pelvis.y - 0.08;
+    this.kitUniforms.uGradY1.value = s.chest.y + 0.08;
     // Low-frequency billow on top of the shader ripple for loose kit.
     const billow = 1 + look.flutter * 2.5 * windFactor * Math.sin(this.kitTime * 5.3);
     const girth = look.inflate * billow;
