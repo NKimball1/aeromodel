@@ -7,6 +7,8 @@ is illustrative, not CFD.
 
 Vite + TypeScript + Three.js. No backend.
 
+Live at **https://aero.nicholaskimball.com** (deployed from `main` by GitHub Actions to GitHub Pages).
+
 ## Status
 
 | Checkpoint | State |
